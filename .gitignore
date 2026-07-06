@@ -1,0 +1,15 @@
+# OS metadata
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Editor/IDE configs
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
