@@ -1,0 +1,25 @@
+{
+  "name": "inventory-app",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jekogreyes1337980-tech/inventory-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/jekogreyes1337980-tech/inventory-app/issues"
+  },
+  "homepage": "https://github.com/jekogreyes1337980-tech/inventory-app#readme",
+  "description": "",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

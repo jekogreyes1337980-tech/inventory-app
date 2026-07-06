@@ -13,3 +13,7 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Node.js
+node_modules/
+package-lock.json
