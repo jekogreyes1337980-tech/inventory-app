@@ -1,5 +1,7 @@
 import { useLocation, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { useAuth } from '../../context/AuthContext';
+import { api } from '../../api/db';
 
 const NAV_ITEMS = [
   { tab: 'dashboard', label: 'Overview', svg: '<rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect>' },
@@ -17,6 +19,53 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const activeTab = location.pathname.replace('/', '') || 'dashboard';
+
+  const handleLogout = () => {
+    Swal.fire({
+      title: 'Are you sure?',
+      text: 'You will be logged out of your session.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Logout',
+      cancelButtonText: 'Cancel',
+      background: '#0f172a',
+      color: '#f3f4f6',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+    }).then((result) => {
+      if (result.isConfirmed) {
+        logout();
+        navigate('/login');
+      }
+    });
+  };
+
+  const handleReset = () => {
+    Swal.fire({
+      title: 'Reset Database?',
+      text: 'This will delete all inventory counts, orders, and logs. This cannot be undone!',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Reset Everything',
+      cancelButtonText: 'Cancel',
+      background: '#0f172a',
+      color: '#f3f4f6',
+      confirmButtonColor: '#ef4444',
+      cancelButtonColor: '#6b7280',
+    }).then(async (result) => {
+      if (result.isConfirmed) {
+        await api.reset();
+        Swal.fire({
+          icon: 'success',
+          title: 'Reset Complete',
+          text: 'Database has been reset to default values.',
+          background: '#0f172a',
+          color: '#f3f4f6',
+          confirmButtonColor: '#6366f1',
+        }).then(() => location.reload());
+      }
+    });
+  };
 
   const roleConfig = {
     admin: { label: 'Administrator', initial: 'A', color: 'var(--primary)' },
@@ -53,8 +102,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
-        <button className="btn btn-secondary w-full" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }} onClick={logout}>
+        <button className="btn btn-secondary w-full" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }} onClick={handleLogout}>
           Logout
+        </button>
+        <button className="btn btn-secondary w-full" style={{ fontSize: '0.8rem', marginBottom: '0.75rem' }} onClick={handleReset}>
+          Reset Database
         </button>
         <div className="user-badge">
           <div className="user-avatar" style={{ background: cfg.color }}>{cfg.initial}</div>

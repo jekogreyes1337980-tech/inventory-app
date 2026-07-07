@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
 import GlassCard from '../components/shared/GlassCard';
 import MetricCard from '../components/shared/MetricCard';
@@ -43,6 +44,21 @@ export default function Dashboard() {
     return 'indigo';
   };
 
+  const confirmNav = (path, title, text) => {
+    Swal.fire({
+      title,
+      text,
+      icon: 'info',
+      showCancelButton: true,
+      confirmButtonText: 'Proceed',
+      cancelButtonText: 'Stay',
+      background: '#0f172a',
+      color: '#f3f4f6',
+      confirmButtonColor: '#6366f1',
+      cancelButtonColor: '#6b7280',
+    }).then((r) => { if (r.isConfirmed) navigate(path); });
+  };
+
   const renderAlerts = () => {
     if (role === 'admin') {
       const checkingCount = supplyOrders.filter((so) => so.status === 'Staff Checked').length;
@@ -56,7 +72,7 @@ export default function Dashboard() {
                   There are {checkingCount} supply order deliveries marked completed by Stock Staff waiting for discrepancy checks.
                 </p>
               </div>
-              <Button variant="danger" size="sm" onClick={() => navigate('/stock-in')}>Go to Verify</Button>
+              <Button variant="danger" size="sm" onClick={() => confirmNav('/stock-in', 'Verify Deliveries', `You have ${checkingCount} deliveries to verify. Proceed to Stock In?`)}>Go to Verify</Button>
             </GlassCard>
           )}
           {lowStocks.length > 0 && (
@@ -67,7 +83,7 @@ export default function Dashboard() {
                   {lowStocks.length} storefront items are running below threshold levels. Request Stock Room to bring stock out.
                 </p>
               </div>
-              <Button variant="warning" size="sm" onClick={() => navigate('/stock-out-sf')}>Request Restock</Button>
+              <Button variant="warning" size="sm" onClick={() => confirmNav('/stock-out-sf', 'Restock Storefront', `${lowStocks.length} items need restock. Proceed to Stock Out?`)}>Request Restock</Button>
             </GlassCard>
           )}
         </>
@@ -88,7 +104,7 @@ export default function Dashboard() {
                   You have {confirmationCount} supply orders pending delivery verification and rack storage.
                 </p>
               </div>
-              <Button variant="primary" size="sm" onClick={() => navigate('/stock-in')}>Log Deliveries</Button>
+              <Button variant="primary" size="sm" onClick={() => confirmNav('/stock-in', 'Log Deliveries', `${confirmationCount} orders pending. Proceed to Stock In?`)}>Log Deliveries</Button>
             </GlassCard>
           )}
           {pendingAdj > 0 && (
@@ -99,7 +115,7 @@ export default function Dashboard() {
                   Admin has requested {pendingAdj} stock collections / storages.
                 </p>
               </div>
-              <Button variant="info" size="sm" onClick={() => navigate('/adjustment')}>View Adjustments</Button>
+              <Button variant="info" size="sm" onClick={() => confirmNav('/adjustment', 'View Adjustments', `${pendingAdj} pending adjustments. Proceed to Adjustments?`)}>View Adjustments</Button>
             </GlassCard>
           )}
         </>
@@ -117,7 +133,7 @@ export default function Dashboard() {
                   There are {pendingChecks.length} orders set aside by Stock Room Staff waiting for final completeness verification.
                 </p>
               </div>
-              <Button variant="success" size="sm" onClick={() => navigate('/stock-out-client')}>Inspect Orders</Button>
+              <Button variant="success" size="sm" onClick={() => confirmNav('/stock-out-client', 'Inspect Orders', `${pendingChecks.length} orders to verify. Proceed to Client Orders?`)}>Inspect Orders</Button>
             </GlassCard>
           )}
         </>
