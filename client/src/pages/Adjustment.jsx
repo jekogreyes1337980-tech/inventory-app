@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
-import { useToast } from '../components/shared/Toast';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -12,7 +12,7 @@ const ROLE_LABELS = { admin: 'Administrator', staff: 'Stock Room Staff', storefr
 
 export default function Adjustment() {
   const { role } = useOutletContext();
-  const showToast = useToast();
+
   const [products, setProducts] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
   const [racks, setRacks] = useState([]);
@@ -32,7 +32,7 @@ export default function Adjustment() {
     const prodId = e.target.product.value;
     const type = e.target.type.value;
     const qty = parseInt(e.target.qty.value);
-    if (!prodId || isNaN(qty) || qty <= 0) { showToast('Please enter a valid product and quantity.', 'warning'); return; }
+    if (!prodId || isNaN(qty) || qty <= 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid product and quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
     const prod = products.find((p) => p.id === prodId);
     if (!prod) return;
     const adjs = [...adjustments];
@@ -43,7 +43,7 @@ export default function Adjustment() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Inventory Adjustment ' + type + ' Requested', message: 'Fulfill: ' + (type === 'In' ? 'Put in' : 'Get out') + ' ' + qty + ' units of ' + prod.name + ' in Stock Room.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Adjustment Request ' + adjId + ' logged.', 'success');
+    Swal.fire({ icon: 'success', title: 'Adjustment Request ' + adjId + ' logged.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
     e.target.reset();
   };
 
@@ -53,7 +53,7 @@ export default function Adjustment() {
   };
 
   const fulfill = async () => {
-    if (!fulfillRack) { showToast('No rack location selected.', 'warning'); return; }
+    if (!fulfillRack) { Swal.fire({ icon: 'warning', title: 'No rack location selected.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
     const adjs = adjustments.map((a) => {
       if (a.id === fulfillAdj.id) {
         const prod = products.find((p) => p.id === a.productId);
@@ -63,7 +63,7 @@ export default function Adjustment() {
             if (!prod.racks.includes(fulfillRack)) prod.racks.push(fulfillRack);
           } else {
             if (prod.stockRoomQty < a.quantity) {
-              showToast('Warning: Insufficient stock room quantity. Adjusting using remaining ' + prod.stockRoomQty + ' items.', 'warning');
+              Swal.fire({ icon: 'warning', title: 'Warning: Insufficient stock room quantity. Adjusting using remaining ' + prod.stockRoomQty + ' items.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
               a.quantity = prod.stockRoomQty;
             }
             prod.stockRoomQty -= a.quantity;
@@ -81,7 +81,7 @@ export default function Adjustment() {
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Adjustment Task Processed', message: 'Completed ' + (fulfillAdj.type === 'In' ? 'Store In' : 'Stock Out') + ' of ' + fulfillAdj.quantity + ' ' + fulfillAdj.productName + ' via ' + fulfillRack + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
     setFulfillAdj(null);
-    showToast('Adjustment completed.', 'success');
+    Swal.fire({ icon: 'success', title: 'Adjustment completed.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const adjProd = fulfillAdj ? products.find((p) => p.id === fulfillAdj.productId) : null;

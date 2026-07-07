@@ -21,7 +21,15 @@ export default function LoginPage() {
         Swal.fire({ icon: 'error', title: 'Login Failed', text: data.error || 'Invalid credentials', background: '#0f172a', color: '#f3f4f6', confirmButtonColor: '#6366f1' });
       }
     } catch (err) {
-      Swal.fire({ icon: 'error', title: 'Network Error', text: err?.error || 'Please try again later.', background: '#0f172a', color: '#f3f4f6', confirmButtonColor: '#6366f1' });
+      const isServerError = err && err.error;
+      Swal.fire({
+        icon: 'error',
+        title: isServerError ? 'Login Failed' : 'Network Error',
+        text: isServerError ? err.error : 'Unable to reach the server. Please try again later.',
+        background: '#0f172a',
+        color: '#f3f4f6',
+        confirmButtonColor: '#6366f1',
+      });
     }
   };
 

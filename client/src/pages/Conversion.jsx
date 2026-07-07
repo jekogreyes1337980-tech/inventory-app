@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
-import { useToast } from '../components/shared/Toast';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
 
 export default function Conversion() {
   const { role } = useOutletContext();
-  const showToast = useToast();
+
   const [products, setProducts] = useState([]);
   const [conversions, setConversions] = useState([]);
   const [selectedProd, setSelectedProd] = useState('');
@@ -42,11 +42,11 @@ export default function Conversion() {
     const est = estimated;
 
     if (!selectedProd || isNaN(m) || m <= 0 || isNaN(cl) || cl <= 0 || isNaN(act) || act < 0) {
-      showToast('Please fill all details with valid positive parameters.', 'warning');
+      Swal.fire({ icon: 'warning', title: 'Please fill all details with valid positive parameters.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
       return;
     }
     if (prod.stockRoomQty < m) {
-      showToast('Insufficient roll meters in stock room (' + prod.stockRoomQty + 'm available).', 'danger');
+      Swal.fire({ icon: 'error', title: 'Insufficient roll meters in stock room (' + prod.stockRoomQty + 'm available).', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
       return;
     }
 
@@ -67,7 +67,7 @@ export default function Conversion() {
     await api.set('conversions', convs);
     setProducts([...products]);
     setConversions(convs);
-    showToast('Roll stock conversion completed successfully!', 'success');
+    Swal.fire({ icon: 'success', title: 'Roll stock conversion completed successfully!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
     setMeters('');
     setActual('');
   };

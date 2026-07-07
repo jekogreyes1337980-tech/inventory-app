@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
-import { useToast } from '../components/shared/Toast';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -17,7 +17,7 @@ const CLIENT_STEPS = [
 
 export default function StockOutClient() {
   const { role } = useOutletContext();
-  const showToast = useToast();
+
   const [products, setProducts] = useState([]);
   const [clientOrders, setClientOrders] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
@@ -51,7 +51,7 @@ export default function StockOutClient() {
         if (!isNaN(qty) && qty > 0) items.push({ productId: p.id, productName: p.name, orderedQty: qty, collectedQty: null, rackSource: null });
       }
     });
-    if (!clientName || items.length === 0) { showToast('Please enter client details and select products.', 'warning'); return; }
+    if (!clientName || items.length === 0) { Swal.fire({ icon: 'warning', title: 'Please enter client details and select products.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
 
     const orders = [...clientOrders];
     const orderId = 'CO-' + (5000 + orders.length + 1);
@@ -62,7 +62,7 @@ export default function StockOutClient() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'New Big Client Order', message: 'Retrieve and record ' + items.length + ' products for client ' + clientName + '.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Client Order ' + orderId + ' logged.', 'success');
+    Swal.fire({ icon: 'success', title: 'Client Order ' + orderId + ' logged.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleStaffCollect = async () => {
@@ -74,7 +74,7 @@ export default function StockOutClient() {
       const rackSelect = document.getElementById('col-rack-' + item.productId);
       if (qtyInput && rackSelect) {
         const colQty = parseInt(qtyInput.value);
-        if (isNaN(colQty) || colQty < 0) { showToast('Please enter a valid collection count.', 'warning'); return; }
+        if (isNaN(colQty) || colQty < 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid collection count.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
         item.collectedQty = colQty;
         item.rackSource = rackSelect.value;
       }
@@ -85,7 +85,7 @@ export default function StockOutClient() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Set Aside', message: 'Items for ' + order.clientName + ' (Order ' + selected.id + ') are set in front. Store Staff please verify.', timestamp: new Date().toISOString(), role: 'storefront', read: false });
     await api.set('notifications', notifs);
-    showToast('Products collected and set aside.', 'success');
+    Swal.fire({ icon: 'success', title: 'Products collected and set aside.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleVerify = async () => {
@@ -96,7 +96,7 @@ export default function StockOutClient() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Verification Cleared', message: 'Order ' + selected.id + ' for ' + selected.clientName + ' has been verified complete.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
-    showToast('Store front verification completed. Ready for delivery.', 'success');
+    Swal.fire({ icon: 'success', title: 'Store front verification completed. Ready for delivery.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleDispatch = async () => {
@@ -114,7 +114,7 @@ export default function StockOutClient() {
     await api.set('clientOrders', orders);
     await api.set('products', products);
     setClientOrders(orders);
-    showToast('Client Order delivered. Inventory stock room counts updated.', 'success');
+    Swal.fire({ icon: 'success', title: 'Client Order delivered. Inventory stock room counts updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const renderActions = () => {

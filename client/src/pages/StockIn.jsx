@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
-import { useToast } from '../components/shared/Toast';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -20,7 +20,7 @@ const SUPPLY_STEPS = [
 
 export default function StockIn() {
   const { role } = useOutletContext();
-  const showToast = useToast();
+
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [supplyOrders, setSupplyOrders] = useState([]);
@@ -66,7 +66,7 @@ export default function StockIn() {
         if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null });
       }
     });
-    if (selectedItems.length === 0) { showToast('Please select at least one product with a valid quantity.', 'warning'); return; }
+    if (selectedItems.length === 0) { Swal.fire({ icon: 'warning', title: 'Please select at least one product with a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
 
     const orders = [...supplyOrders];
     const orderId = 'SO-' + (1000 + orders.length + 1);
@@ -74,7 +74,7 @@ export default function StockIn() {
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
     setSelectedOrderId(orderId);
-    showToast('Supply Order ' + orderId + ' created as Draft!', 'success');
+    Swal.fire({ icon: 'success', title: 'Supply Order ' + orderId + ' created as Draft!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleForward = async (orderId) => {
@@ -88,7 +88,7 @@ export default function StockIn() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'New Supply Delivery Expected', message: 'Verify delivery contents for ' + orderId, timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Order forwarded to Staff.', 'success');
+    Swal.fire({ icon: 'success', title: 'Order forwarded to Staff.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleStaffSubmit = async (orderId) => {
@@ -101,7 +101,7 @@ export default function StockIn() {
       const rackSelect = document.getElementById('rec-rack-' + item.productId);
       if (qtyInput && rackSelect) {
         const recQty = parseInt(qtyInput.value);
-        if (isNaN(recQty) || recQty < 0) { showToast('Please enter a valid received quantity.', 'warning'); return; }
+        if (isNaN(recQty) || recQty < 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid received quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
         item.receivedQty = recQty;
         item.rackLocation = rackSelect.value;
       }
@@ -113,7 +113,7 @@ export default function StockIn() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Verification required on received items for ' + orderId + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
-    showToast('Deliveries recorded. Forwarded to Admin.', 'success');
+    Swal.fire({ icon: 'success', title: 'Deliveries recorded. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleClose = async (orderId) => {
@@ -134,7 +134,7 @@ export default function StockIn() {
     await api.set('supplyOrders', orders);
     await api.set('products', products);
     setSupplyOrders(orders);
-    showToast('Supply Order closed. Inventory updated.', 'success');
+    Swal.fire({ icon: 'success', title: 'Supply Order closed. Inventory updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleReviewDiscrepancy = async (orderId) => {
@@ -157,7 +157,7 @@ export default function StockIn() {
     await api.set('supplyOrders', orders);
     await api.set('products', products);
     setSupplyOrders(orders);
-    showToast('Order finalized. Discrepancy tagged as REFUNDED.', 'success');
+    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleSettleCorrection = async (orderId) => {
@@ -167,7 +167,7 @@ export default function StockIn() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Correction flag set. Returned to Staff queue.', 'success');
+    Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const renderActions = () => {

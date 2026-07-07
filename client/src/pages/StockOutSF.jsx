@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { api } from '../api/db';
-import { useToast } from '../components/shared/Toast';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -10,7 +10,7 @@ import Modal from '../components/shared/Modal';
 
 export default function StockOutSF() {
   const { role } = useOutletContext();
-  const showToast = useToast();
+
   const [products, setProducts] = useState([]);
   const [requests, setRequests] = useState([]);
   const [fulfillReq, setFulfillReq] = useState(null);
@@ -37,14 +37,14 @@ export default function StockOutSF() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Storefront Stock Replenish Requested', message: 'Bring out ' + reqQty + ' units of ' + prod.name + ' from Rack locations to storefront.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Restock request sent.', 'success');
+    Swal.fire({ icon: 'success', title: 'Restock request sent.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleManualRequest = async (e) => {
     e.preventDefault();
     const prodId = e.target.product.value;
     const qty = parseInt(e.target.qty.value);
-    if (!prodId || isNaN(qty) || qty <= 0) { showToast('Please enter a valid product and quantity.', 'warning'); return; }
+    if (!prodId || isNaN(qty) || qty <= 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid product and quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
     const prod = products.find((p) => p.id === prodId);
     if (!prod) return;
     const reqs = [...requests];
@@ -55,7 +55,7 @@ export default function StockOutSF() {
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Fulfillment Requested', message: 'Move ' + qty + ' units of ' + prod.name + ' from racks to storefront.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    showToast('Request created.', 'success');
+    Swal.fire({ icon: 'success', title: 'Request created.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
     e.target.reset();
   };
 
@@ -65,13 +65,13 @@ export default function StockOutSF() {
   };
 
   const submitFulfillment = async () => {
-    if (!selectedRack) { showToast('Please select a rack source.', 'warning'); return; }
+    if (!selectedRack) { Swal.fire({ icon: 'warning', title: 'Please select a rack source.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
     const reqs = requests.map((r) => {
       if (r.id === fulfillReq.id) {
         const prod = products.find((p) => p.id === r.productId);
         if (prod) {
           if (prod.stockRoomQty < r.quantity) {
-            showToast('Warning: Insufficient stock room quantity. Moving remaining ' + prod.stockRoomQty + ' items instead.', 'warning');
+            Swal.fire({ icon: 'warning', title: 'Warning: Insufficient stock room quantity. Moving remaining ' + prod.stockRoomQty + ' items instead.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
             r.quantity = prod.stockRoomQty;
           }
           prod.stockRoomQty -= r.quantity;
@@ -90,7 +90,7 @@ export default function StockOutSF() {
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Storefront Stock Filled', message: 'Delivered ' + req.quantity + ' of ' + req.productName + ' from ' + selectedRack + ' to storefront shelves.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
     setFulfillReq(null);
-    showToast('Stock out completed.', 'success');
+    Swal.fire({ icon: 'success', title: 'Stock out completed.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const prodForFulfill = fulfillReq ? products.find((p) => p.id === fulfillReq.productId) : null;
