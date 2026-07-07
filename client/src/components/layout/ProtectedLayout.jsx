@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/db';
@@ -12,6 +12,7 @@ export default function ProtectedLayout() {
   const [verifying, setVerifying] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [showInbox, setShowInbox] = useState(false);
+  const verifiedRef = useRef(false);
 
   const currentRole = user?.role || 'admin';
 
@@ -21,13 +22,12 @@ export default function ProtectedLayout() {
   }, []);
 
   useEffect(() => {
-    if (!user) { setVerifying(false); return; }
-    // Verify stored session against the server
+    if (!user || verifiedRef.current) { setVerifying(false); return; }
+    verifiedRef.current = true;
     api.verify(user.username).then((data) => {
       if (!data.valid) logout();
       setVerifying(false);
     }).catch(() => {
-      logout();
       setVerifying(false);
     });
   }, [user, logout]);
