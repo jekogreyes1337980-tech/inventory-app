@@ -1,19 +1,26 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const isProduction = fs.existsSync(path.join(__dirname, 'client', 'dist'));
 
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '10mb' })); // Support large JSON payloads
 
-// Serve static files from the project root
-app.use(express.static(__dirname));
+// In production, serve the built React app
+if (isProduction) {
+  app.use(express.static(path.join(__dirname, 'client', 'dist')));
+} else {
+  // In development, serve static files from the project root (legacy support)
+  app.use(express.static(__dirname));
+}
 
 let db;
 
@@ -128,10 +135,21 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// SPA catch-all: serve client index.html for non-API routes in production
+if (isProduction) {
+    app.use((req, res, next) => {
+        if (req.method === 'GET' && !req.path.startsWith('/api/') && !req.path.startsWith('/assets/')) {
+            return res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+        }
+        next();
+    });
+}
+
 // Start the server
 initDb().then(() => {
     app.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);
+        if (isProduction) console.log('Serving React production build from client/dist');
     });
 }).catch(err => {
     console.error('Failed to initialize database:', err);
