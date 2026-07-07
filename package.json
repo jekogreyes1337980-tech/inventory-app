@@ -19,6 +19,7 @@
   "homepage": "https://github.com/jekogreyes1337980-tech/inventory-app#readme",
   "description": "",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "sqlite": "^5.1.1",

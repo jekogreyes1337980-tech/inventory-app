@@ -1,13 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Irene's Inventory Management & Handoff System</title>
-  
+
   <!-- CSS Styling link -->
   <link rel="stylesheet" href="css/style.css">
 </head>
+
 <body>
 
   <!-- Dynamic Glowing Orbs for Aesthetic Background -->
@@ -15,14 +17,17 @@
   <div class="glow-orb orb-2"></div>
 
   <div class="app-container">
-    
+
     <!-- Sidebar Navigation -->
     <aside class="sidebar">
       <div class="logo-container">
         <div class="logo-icon">
           <!-- Cube Icon SVG -->
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path
+              d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+            </path>
             <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
             <line x1="12" y1="22.08" x2="12" y2="12"></line>
           </svg>
@@ -34,43 +39,83 @@
         <ul class="nav-menu">
           <li class="nav-item active" data-tab="dashboard">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="3" y="3" width="7" height="9"></rect>
+                <rect x="14" y="3" width="7" height="5"></rect>
+                <rect x="14" y="12" width="7" height="9"></rect>
+                <rect x="3" y="16" width="7" height="5"></rect>
+              </svg>
               Overview
             </button>
           </li>
           <li class="nav-item" data-tab="inventory">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+              </svg>
               Inventory & Racks
             </button>
           </li>
           <li class="nav-item" data-tab="stock-in">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><polyline points="19 12 12 19 5 12"></polyline></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <polyline points="19 12 12 19 5 12"></polyline>
+              </svg>
               Stock In (Supplies)
             </button>
           </li>
           <li class="nav-item" data-tab="stock-out-sf">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"></line><polyline points="5 12 12 5 19 12"></polyline></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="12" y1="19" x2="12" y2="5"></line>
+                <polyline points="5 12 12 5 19 12"></polyline>
+              </svg>
               Stock Out (Storefront)
             </button>
           </li>
           <li class="nav-item" data-tab="stock-out-client">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <rect x="1" y="3" width="15" height="13"></rect>
+                <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                <circle cx="18.5" cy="18.5" r="2.5"></circle>
+              </svg>
               Stock Out (Client)
             </button>
           </li>
           <li class="nav-item" data-tab="conversion">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="9.8" y1="8.2" x2="20" y2="18.4"></line><line x1="9.8" y1="15.8" x2="20" y2="5.6"></line></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="6" cy="6" r="3"></circle>
+                <circle cx="6" cy="18" r="3"></circle>
+                <line x1="9.8" y1="8.2" x2="20" y2="18.4"></line>
+                <line x1="9.8" y1="15.8" x2="20" y2="5.6"></line>
+              </svg>
               Stock Conversion
             </button>
           </li>
           <li class="nav-item" data-tab="adjustment">
             <button>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><circle cx="4" cy="12" r="2"></circle><circle cx="12" cy="10" r="2"></circle><circle cx="20" cy="14" r="2"></circle></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="4" y1="21" x2="4" y2="14"></line>
+                <line x1="4" y1="10" x2="4" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12" y2="3"></line>
+                <line x1="20" y1="21" x2="20" y2="16"></line>
+                <line x1="20" y1="12" x2="20" y2="3"></line>
+                <circle cx="4" cy="12" r="2"></circle>
+                <circle cx="12" cy="10" r="2"></circle>
+                <circle cx="20" cy="14" r="2"></circle>
+              </svg>
               Stock Adjustment
             </button>
           </li>
@@ -79,13 +124,17 @@
 
       <!-- Sidebar footer with system controls -->
       <div class="sidebar-footer">
-        <button class="btn btn-secondary w-full" style="font-size:0.8rem; margin-bottom: 0.75rem;" onclick="resetSystemDatabase()">
+        <button class="btn btn-secondary w-full" style="font-size:0.8rem; margin-bottom: 0.75rem;" onclick="logout()">
+          Logout
+        </button>
+        <button class="btn btn-secondary w-full" style="font-size:0.8rem; margin-bottom: 0.75rem;"
+          onclick="resetSystemDatabase()">
           Reset Database
         </button>
         <div class="user-badge">
           <div class="user-avatar" id="user-avatar-initial">A</div>
           <div class="user-info">
-            <span class="user-name">Ms. Irene</span>
+            <span class="user-name" id="user-name-text">Ms. Irene</span>
             <span class="user-role-label" id="user-role-text">Administrator</span>
           </div>
         </div>
@@ -94,26 +143,18 @@
 
     <!-- Main Content Area -->
     <main class="main-content">
-      
+
       <!-- Sticky Top Header Navigation -->
       <header class="header-nav">
         <div class="page-title-container">
           <h1 id="header-page-title">Inventory Dashboard</h1>
         </div>
         <div class="header-controls">
-          <!-- Interactive Simulator Role Selector -->
-          <div class="role-selector-container">
-            <span class="role-selector-label">Simulate Role:</span>
-            <select id="role-selector" class="role-select">
-              <option value="admin">Administrator (Ms. Irene)</option>
-              <option value="staff">Stock Room Staff</option>
-              <option value="storefront">Store Front Staff</option>
-            </select>
-          </div>
-
           <!-- Notification Drawer Bell Toggle -->
-          <button class="notification-bell-btn" id="notification-bell" onclick="toggleNotificationInbox()" aria-label="Toggle notifications">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <button class="notification-bell-btn" id="notification-bell" onclick="toggleNotificationInbox()"
+            aria-label="Toggle notifications">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
               <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
             </svg>
@@ -124,14 +165,17 @@
 
       <!-- Dynamic Tab Panels Workspace -->
       <div class="workspace">
-        
+
         <!-- 1. OVERVIEW/DASHBOARD TAB -->
         <section id="dashboard-tab" class="tab-panel active">
           <!-- Key Metrics Grid -->
           <div class="grid-3">
             <div class="glass-card metric-card">
               <div class="metric-icon rose">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                  </path>
+                </svg>
               </div>
               <div class="metric-data">
                 <span class="metric-title">Low Storefront Stocks</span>
@@ -140,7 +184,13 @@
             </div>
             <div class="glass-card metric-card">
               <div class="metric-icon indigo">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
               </div>
               <div class="metric-data">
                 <span class="metric-title">Active Supply Orders</span>
@@ -149,7 +199,11 @@
             </div>
             <div class="glass-card metric-card">
               <div class="metric-icon teal">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="9.8" y1="8.2" x2="20" y2="18.4"></line></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="6" cy="6" r="3"></circle>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <line x1="9.8" y1="8.2" x2="20" y2="18.4"></line>
+                </svg>
               </div>
               <div class="metric-data">
                 <span class="metric-title">Conversions Logged</span>
@@ -167,7 +221,12 @@
           <!-- Active Supply Orders lists -->
           <div class="glass-card">
             <h2 class="card-title">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="16" y1="2" x2="16" y2="6"></line>
+                <line x1="8" y1="2" x2="8" y2="6"></line>
+                <line x1="3" y1="10" x2="21" y2="10"></line>
+              </svg>
               Active Supply Shipments Tracker
             </h2>
             <div class="table-container">
@@ -195,11 +254,14 @@
           <div class="glass-card">
             <div class="d-flex justify-between align-center" style="margin-bottom: 1.25rem;">
               <h2 class="card-title" style="margin-bottom:0;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+                  <line x1="7" y1="7" x2="7.01" y2="7"></line>
+                </svg>
                 Current Product Inventory & Rack Positions
               </h2>
             </div>
-            
+
             <div class="table-container">
               <table>
                 <thead>
@@ -227,7 +289,10 @@
             <!-- 3a. Administrator: Add Supply Order Form -->
             <div class="glass-card" data-role-only="admin">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                  <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                </svg>
                 Draft New Supply Order (Admin)
               </h2>
               <form onsubmit="adminCreateSupplyOrder(event)">
@@ -235,10 +300,11 @@
                   <label for="supply-order-supplier">Select Supplier Partner</label>
                   <select id="supply-order-supplier"></select>
                 </div>
-                
+
                 <div class="form-group">
                   <label>Select Items & Specify Quantities to Order</label>
-                  <div style="max-height: 250px; overflow-y: auto; padding-right:0.5rem;" id="supply-order-products-grid">
+                  <div style="max-height: 250px; overflow-y: auto; padding-right:0.5rem;"
+                    id="supply-order-products-grid">
                     <!-- Products dynamically rendered -->
                   </div>
                 </div>
@@ -251,7 +317,8 @@
             <div class="glass-card" data-role-only="staff,storefront">
               <h2 class="card-title">Stock In Workflow</h2>
               <p style="font-size:0.9rem; color:var(--text-muted); line-height: 1.5;">
-                Supply Order forms are drafted and verified by the **Administrator** role. As **Stock Room Staff**, your task is to verify delivered items and store them on designated racks once the order is forwarded to you.
+                Supply Order forms are drafted and verified by the **Administrator** role. As **Stock Room Staff**, your
+                task is to verify delivered items and store them on designated racks once the order is forwarded to you.
               </p>
               <div style="margin-top: 1.5rem; text-align: center;">
                 <span class="badge badge-indigo">Role Restricted View</span>
@@ -261,10 +328,13 @@
             <!-- 3b. Detail / Stepper panel (Accessible by Admin and Stock Room) -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <polyline points="12 6 12 12 16 14"></polyline>
+                </svg>
                 Verify & Track Deliveries
               </h2>
-              
+
               <div class="form-group" style="margin-bottom: 1.5rem;">
                 <label for="supply-order-detail-select">Choose Supply Order:</label>
                 <select id="supply-order-detail-select" onchange="onSupplyOrderSelected()">
@@ -303,7 +373,8 @@
                 </div>
 
                 <!-- Dynamic role interactive actions panel -->
-                <div id="supply-order-actions-panel" class="glass-card" style="margin: 0; background: rgba(255,255,255,0.02);">
+                <div id="supply-order-actions-panel" class="glass-card"
+                  style="margin: 0; background: rgba(255,255,255,0.02);">
                   <!-- Actions based on role and status -->
                 </div>
               </div>
@@ -318,10 +389,15 @@
             <!-- 4a. Trigger Request Panel (Admin/Store Front) -->
             <div class="glass-card" data-role-only="admin,storefront">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z">
+                  </path>
+                  <line x1="12" y1="9" x2="12" y2="13"></line>
+                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                </svg>
                 Low Storefront Replenish Requests
               </h2>
-              
+
               <!-- Automatic Warnings list -->
               <div style="margin-bottom: 1.5rem;">
                 <h4 style="margin-bottom:0.75rem; color: var(--warning);">Storefront Low Stock Alerts</h4>
@@ -351,7 +427,8 @@
             <div class="glass-card" data-role-only="staff">
               <h2 class="card-title">Storefront Stock Movement</h2>
               <p style="font-size:0.9rem; color:var(--text-muted); line-height: 1.5;">
-                As **Stock Room Staff**, look at the movement tracker panel to verify requested store fronts items, extract them from stock room racks, and record completion of the stock out.
+                As **Stock Room Staff**, look at the movement tracker panel to verify requested store fronts items,
+                extract them from stock room racks, and record completion of the stock out.
               </p>
               <div style="margin-top: 1.5rem; text-align: center;">
                 <span class="badge badge-success">Fulfillment Role Active</span>
@@ -361,7 +438,12 @@
             <!-- 4b. Stock Movement Requests Table -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="21" x2="17" y2="3"></line><polyline points="20 18 17 21 14 18"></polyline><line x1="7" y1="3" x2="7" y2="21"></line><polyline points="10 6 7 3 4 6"></polyline></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="17" y1="21" x2="17" y2="3"></line>
+                  <polyline points="20 18 17 21 14 18"></polyline>
+                  <line x1="7" y1="3" x2="7" y2="21"></line>
+                  <polyline points="10 6 7 3 4 6"></polyline>
+                </svg>
                 Movement & Shelving Log
               </h2>
               <div class="table-container">
@@ -392,7 +474,12 @@
             <!-- 5a. Admin creates client order -->
             <div class="glass-card" data-role-only="admin,staff">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="8.5" cy="7" r="4"></circle>
+                  <line x1="20" y1="8" x2="20" y2="14"></line>
+                  <line x1="23" y1="11" x2="17" y2="11"></line>
+                </svg>
                 Record Big Client Order
               </h2>
               <form onsubmit="createClientOrder(event)">
@@ -402,7 +489,8 @@
                 </div>
                 <div class="form-group">
                   <label>Select Items & Quantities to Purchase</label>
-                  <div style="max-height: 250px; overflow-y: auto; padding-right:0.5rem;" id="client-order-products-grid">
+                  <div style="max-height: 250px; overflow-y: auto; padding-right:0.5rem;"
+                    id="client-order-products-grid">
                     <!-- Products checklist -->
                   </div>
                 </div>
@@ -414,14 +502,20 @@
             <div class="glass-card" data-role-only="storefront">
               <h2 class="card-title">Big Client Dispatch</h2>
               <p style="font-size:0.9rem; color:var(--text-muted); line-height: 1.5;">
-                As **Store Front Staff**, you check items collected by the Stock Room Staff to ensure the order is correct and complete before delivery or pick-up.
+                As **Store Front Staff**, you check items collected by the Stock Room Staff to ensure the order is
+                correct and complete before delivery or pick-up.
               </p>
             </div>
 
             <!-- 5b. Client Order Details Tracking -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z">
+                  </path>
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                </svg>
                 Fulfillment Handoff Tracker
               </h2>
 
@@ -462,7 +556,8 @@
                 </div>
 
                 <!-- Dynamic role interactive actions panel -->
-                <div id="client-order-actions-panel" class="glass-card" style="margin: 0; background: rgba(255,255,255,0.02);">
+                <div id="client-order-actions-panel" class="glass-card"
+                  style="margin: 0; background: rgba(255,255,255,0.02);">
                   <!-- Actions -->
                 </div>
               </div>
@@ -477,13 +572,21 @@
             <!-- Conversion Calculator panel -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"></line><circle cx="18" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><path d="M18 9a9 9 0 0 1-9 9"></path></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="6" y1="3" x2="6" y2="15"></line>
+                  <circle cx="18" cy="6" r="3"></circle>
+                  <circle cx="6" cy="18" r="3"></circle>
+                  <path d="M18 9a9 9 0 0 1-9 9"></path>
+                </svg>
                 Pre-cut Roll Conversion Calculator (Yards to Meters)
               </h2>
-              
-              <div style="border-left:3px solid var(--info); background:rgba(6,182,212,0.04); padding:1rem; border-radius: var(--radius-md); margin-bottom:1.5rem;">
+
+              <div
+                style="border-left:3px solid var(--info); background:rgba(6,182,212,0.04); padding:1rem; border-radius: var(--radius-md); margin-bottom:1.5rem;">
                 <p style="font-size: 0.85rem; line-height: 1.4; color: var(--text-muted);">
-                  <strong>Note:</strong> Bulk product rolls are measured and purchased in **Meters**. Storefront pre-cut rolls are sold and measured in **Yards**. The system estimates output rolls based on `1 Meter = 1.09361 Yards`.
+                  <strong>Note:</strong> Bulk product rolls are measured and purchased in **Meters**. Storefront pre-cut
+                  rolls are sold and measured in **Yards**. The system estimates output rolls based on `1 Meter =
+                  1.09361 Yards`.
                 </p>
               </div>
 
@@ -492,22 +595,25 @@
                   <label for="conversion-product">Select Roll Product in Stock Room</label>
                   <select id="conversion-product" onchange="onConversionInputsChange()"></select>
                 </div>
-                
+
                 <div class="form-row">
                   <div class="form-group">
                     <label for="conversion-meters">Length to Cut (Meters)</label>
-                    <input type="number" step="0.1" id="conversion-meters" placeholder="e.g. 5" oninput="onConversionInputsChange()">
+                    <input type="number" step="0.1" id="conversion-meters" placeholder="e.g. 5"
+                      oninput="onConversionInputsChange()">
                   </div>
                   <div class="form-group">
                     <label for="conversion-cut-length">Pre-cut Target Length (Yards)</label>
-                    <input type="number" step="0.1" id="conversion-cut-length" value="1.0" oninput="onConversionInputsChange()">
+                    <input type="number" step="0.1" id="conversion-cut-length" value="1.0"
+                      oninput="onConversionInputsChange()">
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
                     <label for="conversion-estimated">Estimated Rolls Output (Yards)</label>
-                    <input type="number" id="conversion-estimated" readonly style="background: rgba(255,255,255,0.02); font-weight:600; color: var(--info);">
+                    <input type="number" id="conversion-estimated" readonly
+                      style="background: rgba(255,255,255,0.02); font-weight:600; color: var(--info);">
                   </div>
                   <div class="form-group">
                     <label for="conversion-actual">Actual Pre-cut Rolls Produced</label>
@@ -515,7 +621,8 @@
                   </div>
                 </div>
 
-                <button type="submit" class="btn btn-success w-full" style="margin-top:0.5rem;" id="conversion-submit-btn">
+                <button type="submit" class="btn btn-success w-full" style="margin-top:0.5rem;"
+                  id="conversion-submit-btn">
                   Record Conversion & Stock to Storefront
                 </button>
               </form>
@@ -524,7 +631,10 @@
             <!-- Conversion Logs -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+                </svg>
                 Conversion Logs
               </h2>
               <div class="table-container">
@@ -556,7 +666,11 @@
             <!-- 7a. Admin Adjustment request inputs -->
             <div class="glass-card" data-role-only="admin">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="23 4 23 10 17 10"></polyline>
+                  <polyline points="1 20 1 14 7 14"></polyline>
+                  <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+                </svg>
                 Trigger Stock Adjustments (Admin)
               </h2>
               <form onsubmit="adminSubmitAdjustment(event)">
@@ -585,14 +699,21 @@
             <div class="glass-card" data-role-only="staff,storefront">
               <h2 class="card-title">Internal Racks Fulfillments</h2>
               <p style="font-size:0.9rem; color:var(--text-muted); line-height: 1.5;">
-                As **Stock Room Staff**, view requested internal adjustments from the table. Run stock room extraction (for Stock Out requests) or shelve incoming items on designated racks (for Stock In requests).
+                As **Stock Room Staff**, view requested internal adjustments from the table. Run stock room extraction
+                (for Stock Out requests) or shelve incoming items on designated racks (for Stock In requests).
               </p>
             </div>
 
             <!-- 7b. Adjustments Table logs -->
             <div class="glass-card">
               <h2 class="card-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                  <polyline points="14 2 14 8 20 8"></polyline>
+                  <line x1="16" y1="13" x2="8" y2="13"></line>
+                  <line x1="16" y1="17" x2="8" y2="17"></line>
+                  <polyline points="10 9 9 9 8 9"></polyline>
+                </svg>
                 Adjustment Operations log
               </h2>
               <div class="table-container">
@@ -649,7 +770,8 @@
   </div>
 
   <!-- B. Storefront Request Fulfillment Modal -->
-  <div class="modal-backdrop" id="sf-fulfillment-modal" onclick="if(event.target === this) closeSFMovementFulfillmentModal()">
+  <div class="modal-backdrop" id="sf-fulfillment-modal"
+    onclick="if(event.target === this) closeSFMovementFulfillmentModal()">
     <div class="modal-container">
       <div class="modal-header">
         <h3 class="modal-title">Record Stock Out Movement</h3>
@@ -663,7 +785,8 @@
         </div>
         <div class="form-group">
           <label>Select Rack Location to Extract Items From:</label>
-          <div id="sf-fulfillment-rack-selection" style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
+          <div id="sf-fulfillment-rack-selection"
+            style="margin-top:0.5rem; display:flex; flex-direction:column; gap:0.5rem;">
             <!-- Radio options -->
           </div>
         </div>
@@ -701,6 +824,7 @@
   </div>
 
   <!-- Javascript scripts loaders (loaded in dependency order) -->
+  <script src="js/auth.js"></script>
   <script src="js/mockData.js"></script>
   <script src="js/db.js"></script>
   <script src="js/ui.js"></script>
@@ -708,4 +832,5 @@
   <script src="js/actions.js"></script>
   <script src="js/app.js"></script>
 </body>
+
 </html>

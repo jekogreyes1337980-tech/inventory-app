@@ -4,13 +4,18 @@
 // ============================================================
 
 // Global App State
-let currentRole = "admin"; // 'admin' | 'staff' | 'storefront'
+let currentRole = typeof currentUser !== 'undefined' && currentUser ? currentUser.role : "admin"; // 'admin' | 'staff' | 'storefront'
 let activeTab = "dashboard";
 
 // --- Entry Point ---
 document.addEventListener("DOMContentLoaded", () => {
+  if (typeof currentUser === 'undefined' || !currentUser) return; // Prevent executing app logic if not logged in
+  
+  const userNameEl = document.getElementById('user-name-text');
+  if (userNameEl) userNameEl.innerText = currentUser.username;
+
   DB.init();
-  setupRoleSwitcher();
+  setupRoleDisplay();
   setupTabNavigation();
   setupFormHandlers();
   renderAllViews();
@@ -19,25 +24,22 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("client-order-detail-card").style.display = "none";
 });
 
-// --- Role Switcher ---
-function setupRoleSwitcher() {
-  document.getElementById("role-selector").addEventListener("change", (e) => {
-    currentRole = e.target.value;
-    const badgeText = document.getElementById("user-role-text");
-    const avatar = document.getElementById("user-avatar-initial");
-    const roleConfig = {
-      admin:      { label: "Administrator",     initial: "A",  color: "var(--primary)" },
-      staff:      { label: "Stock Room Staff",  initial: "SR", color: "var(--success)" },
-      storefront: { label: "Store Front Staff", initial: "SF", color: "var(--info)" }
-    };
-    const cfg = roleConfig[currentRole];
-    badgeText.innerText = cfg.label;
-    avatar.innerText = cfg.initial;
-    avatar.style.background = cfg.color;
-    showToast(`Switched view to: ${getRoleName(currentRole)}`, "success");
-    updateNotificationIndicator();
-    renderAllViews();
-  });
+// --- Role Display ---
+function setupRoleDisplay() {
+  const badgeText = document.getElementById("user-role-text");
+  const avatar = document.getElementById("user-avatar-initial");
+  if (!badgeText || !avatar) return;
+  
+  const roleConfig = {
+    admin:      { label: "Administrator",     initial: "A",  color: "var(--primary)" },
+    staff:      { label: "Stock Room Staff",  initial: "SR", color: "var(--success)" },
+    storefront: { label: "Store Front Staff", initial: "SF", color: "var(--info)" }
+  };
+  const cfg = roleConfig[currentRole] || roleConfig.admin;
+  badgeText.innerText = cfg.label;
+  avatar.innerText = cfg.initial;
+  avatar.style.background = cfg.color;
+  showToast(`Welcome back, ${currentUser.username}!`, "success");
 }
 
 // --- Tab Navigation ---
