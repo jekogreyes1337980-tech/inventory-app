@@ -135,6 +135,24 @@ app.post('/api/login', async (req, res) => {
     }
 });
 
+// Verify a stored session — checks that the user still exists in the database
+app.post('/api/verify', async (req, res) => {
+    try {
+        const { username } = req.body;
+        if (!username) {
+            return res.status(400).json({ valid: false, error: 'Username required' });
+        }
+        const user = await db.get('SELECT id, username, role FROM users WHERE username = ?', [username]);
+        if (!user) {
+            return res.json({ valid: false });
+        }
+        res.json({ valid: true, user });
+    } catch (err) {
+        console.error('Error verifying session:', err);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
 // SPA catch-all: serve client index.html for non-API routes in production
 if (isProduction) {
     app.use((req, res, next) => {

@@ -23,6 +23,13 @@ export const api = {
     });
   },
 
+  async verify(username) {
+    return request('/api/verify', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+  },
+
   async reset() {
     return request(RESET_URL, { method: 'POST' });
   },

@@ -8,7 +8,8 @@ import Header from './Header';
 import NotificationInbox from '../modals/NotificationInbox';
 
 export default function ProtectedLayout() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
+  const [verifying, setVerifying] = useState(true);
   const [notifications, setNotifications] = useState([]);
   const [showInbox, setShowInbox] = useState(false);
 
@@ -20,10 +21,22 @@ export default function ProtectedLayout() {
   }, []);
 
   useEffect(() => {
-    loadNotifications();
-  }, [loadNotifications]);
+    if (!user) { setVerifying(false); return; }
+    // Verify stored session against the server
+    api.verify(user.username).then((data) => {
+      if (!data.valid) logout();
+      setVerifying(false);
+    }).catch(() => {
+      logout();
+      setVerifying(false);
+    });
+  }, [user, logout]);
 
-  if (loading) return null;
+  useEffect(() => {
+    if (user) loadNotifications();
+  }, [user, loadNotifications]);
+
+  if (loading || verifying) return null;
   if (!user) return <Navigate to="/login" replace />;
 
   const roleNotifs = notifications.filter((n) => n.role === currentRole);
