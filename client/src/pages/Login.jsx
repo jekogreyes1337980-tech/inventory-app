@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../api/db';
 
@@ -8,21 +9,19 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     try {
       const data = await api.login(username, password);
       if (data.success) {
         login(data.user);
         navigate('/dashboard');
       } else {
-        setError(data.error || 'Login failed');
+        Swal.fire({ icon: 'error', title: 'Login Failed', text: data.error || 'Invalid credentials', background: '#0f172a', color: '#f3f4f6', confirmButtonColor: '#6366f1' });
       }
     } catch (err) {
-      setError(err?.error || 'Network error. Please try again later.');
+      Swal.fire({ icon: 'error', title: 'Network Error', text: err?.error || 'Please try again later.', background: '#0f172a', color: '#f3f4f6', confirmButtonColor: '#6366f1' });
     }
   };
 
@@ -42,13 +41,6 @@ export default function LoginPage() {
           <h2>IMS Irene</h2>
           <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Sign in to your account</p>
         </div>
-
-        {error && (
-          <div className="auth-error" style={{ display: 'flex' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-            <span>{error}</span>
-          </div>
-        )}
 
         <form id="login-form" onSubmit={handleSubmit}>
           <div className="form-group">
