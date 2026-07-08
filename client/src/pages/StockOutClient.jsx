@@ -9,14 +9,14 @@ import Badge from '../components/shared/Badge';
 import Timeline from '../components/shared/Timeline';
 
 const CLIENT_STEPS = [
-  { title: 'Order Logged', desc: 'Order details recorded by Admin / Staff.' },
-  { title: 'Collected & Set Aside', desc: 'Stock room staff retrieved products and set them in front of the stock room.' },
-  { title: 'Store Front Verified', desc: 'Store front staff checked accuracy of order products.' },
-  { title: 'Completed & Dispatched', desc: 'Client picked up the order. Hand-off complete.' },
+  { title: 'Order Logged', desc: 'Order details recorded.', handledKey: 'loggedBy' },
+  { title: 'Collected & Set Aside', desc: 'Products retrieved from racks.', handledKey: 'collectedBy' },
+  { title: 'Store Front Verified', desc: 'Order accuracy confirmed.', handledKey: 'verifiedBy' },
+  { title: 'Dispatched', desc: 'Client picked up. Hand-off complete.', handledKey: null },
 ];
 
 export default function StockOutClient() {
-  const { role } = useOutletContext();
+  const { role, user } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [clientOrders, setClientOrders] = useState([]);
@@ -55,7 +55,7 @@ export default function StockOutClient() {
 
     const orders = [...clientOrders];
     const orderId = 'CO-' + (5000 + orders.length + 1);
-    orders.unshift({ id: orderId, clientName, dateCreated: new Date().toISOString(), status: 'Pending Staff Collection', items });
+    orders.unshift({ id: orderId, clientName, dateCreated: new Date().toISOString(), status: 'Pending Staff Collection', items, handledBy: { loggedBy: user?.username } });
     await api.set('clientOrders', orders);
     setClientOrders(orders);
     setSelectedOrderId(orderId);
@@ -80,23 +80,38 @@ export default function StockOutClient() {
       }
     }
     order.status = 'Pending Store Front Check';
+    if (!order.handledBy) order.handledBy = {};
+    order.handledBy.collectedBy = user?.username;
     await api.set('clientOrders', orders);
     setClientOrders(orders);
     const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Set Aside', message: 'Items for ' + order.clientName + ' (Order ' + selected.id + ') are set in front. Store Staff please verify.', timestamp: new Date().toISOString(), role: 'storefront', read: false });
+    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Set Aside', message: 'Items for ' + order.clientName + ' (' + selected.id + ') set aside by ' + user?.username + '. Please verify.', timestamp: new Date().toISOString(), role: 'storefront', read: false });
     await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Products collected and set aside.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Products collected by ' + user?.username + ' and set aside.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleVerify = async () => {
     if (!selected) return;
-    const orders = clientOrders.map((o) => { if (o.id === selected.id) o.status = 'Ready for Delivery/Pick-up'; return o; });
+    const h = selected.handledBy || {};
+    // Accountability guard
+    if (h.collectedBy && h.collectedBy === user?.username) {
+      Swal.fire({ icon: 'warning', title: 'You collected this order — another staff member must verify it.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3500, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
+    const orders = clientOrders.map((o) => {
+      if (o.id === selected.id) {
+        o.status = 'Ready for Delivery/Pick-up';
+        if (!o.handledBy) o.handledBy = {};
+        o.handledBy.verifiedBy = user?.username;
+      }
+      return o;
+    });
     await api.set('clientOrders', orders);
     setClientOrders(orders);
     const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Verification Cleared', message: 'Order ' + selected.id + ' for ' + selected.clientName + ' has been verified complete.', timestamp: new Date().toISOString(), role: 'admin', read: false });
+    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Client Order Verification Cleared', message: 'Order ' + selected.id + ' verified by ' + user?.username + ' and ready for dispatch.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Store front verification completed. Ready for delivery.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Order verified by ' + user?.username + '. Ready for delivery.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleDispatch = async () => {
@@ -119,11 +134,16 @@ export default function StockOutClient() {
 
   const renderActions = () => {
     if (!selected) return null;
+    const h = selected.handledBy || {};
+
     if (selected.status === 'Pending Staff Collection') {
-      if (role === 'staff') {
+      const isNonAdmin = role === 'staff' || role === 'storefront';
+      const isSameAsLogger = h.loggedBy && h.loggedBy === user?.username;
+      if (isNonAdmin && !isSameAsLogger) {
+        const roleLabel = role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff';
         return (
           <div>
-            <h4>Collect Products (Stock Room Staff)</h4>
+            <h4>Collect Products ({roleLabel})</h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Collect counts from racks and set them in front of the stock room:</p>
             <div style={{ marginBottom: '1.25rem' }}>
               {selected.items.map((item) => {
@@ -140,38 +160,51 @@ export default function StockOutClient() {
                 );
               })}
             </div>
-            <Button variant="primary" onClick={handleStaffCollect}>Set Aside & Notify Store Front</Button>
+            <Button variant="primary" onClick={handleStaffCollect}>Set Aside &amp; Notify Store Front</Button>
           </div>
         );
       }
-      return <div style={{ color: 'var(--text-muted)' }}>Awaiting Stock Room Staff to collect and set items aside...</div>;
+      if (isSameAsLogger) {
+        return <div style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>⚠ You logged this order — another staff member must collect the items.</div>;
+      }
+      return <div style={{ color: 'var(--text-muted)' }}>Awaiting Staff to collect and set items aside...</div>;
     }
+
     if (selected.status === 'Pending Store Front Check') {
-      if (role === 'storefront') {
+      const isNonAdmin = role === 'staff' || role === 'storefront';
+      const isSameAsCollector = h.collectedBy && h.collectedBy === user?.username;
+      if (isNonAdmin && !isSameAsCollector) {
+        const roleLabel = role === 'storefront' ? 'Store Front Staff' : 'Stock Room Staff';
         return (
           <div>
-            <h4>Verify Client Order (Store Front Staff)</h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Inspect order layout. Confirm items set aside are complete and correct.</p>
-            <Button variant="success" onClick={handleVerify}>Verify Complete & Ready for Delivery</Button>
+            <h4>Verify Client Order ({roleLabel})</h4>
+            {h.collectedBy && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Collected by: <strong style={{ color: 'var(--success)' }}>{h.collectedBy}</strong></p>}
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Inspect items set aside. Confirm order is complete and correct.</p>
+            <Button variant="success" onClick={handleVerify}>Verify Complete &amp; Ready for Delivery</Button>
           </div>
         );
       }
-      return <div style={{ color: 'var(--text-muted)' }}>Awaiting Store Front Staff to inspect and verify set aside products...</div>;
+      if (isSameAsCollector) {
+        return <div style={{ color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>⚠ You collected this order — another staff member must verify it.</div>;
+      }
+      return <div style={{ color: 'var(--text-muted)' }}>Awaiting Staff to inspect and verify the set-aside products...</div>;
     }
+
     if (selected.status === 'Ready for Delivery/Pick-up') {
-      if (role === 'admin' || role === 'staff') {
+      if (role === 'admin' || role === 'staff' || role === 'storefront') {
         return (
           <div>
-            <h4>Final Pick-up & Dispatch</h4>
+            <h4>Final Pick-up &amp; Dispatch</h4>
+            {h.verifiedBy && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Verified by: <strong style={{ color: 'var(--success)' }}>{h.verifiedBy}</strong></p>}
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Client has arrived to collect. Confirm delivery hand-off.</p>
             <Button variant="success" onClick={handleDispatch}>Log Client Pick-up (Close Workflow)</Button>
           </div>
         );
       }
-      return <div style={{ color: 'var(--text-muted)' }}>Ready for Pick-up. Client hand-off must be completed by Admin/Stock Staff.</div>;
     }
+
     if (selected.status === 'Closed') {
-      return <div style={{ color: 'var(--success)' }}>This client order is dispatched and closed.</div>;
+      return <div style={{ color: 'var(--success)' }}>✓ This client order is dispatched and closed.</div>;
     }
     return null;
   };
@@ -179,7 +212,7 @@ export default function StockOutClient() {
   return (
     <section className="tab-panel active">
       <div className="grid-2">
-        <GlassCard style={{ display: role === 'admin' || role === 'staff' ? '' : 'none' }}>
+        <GlassCard style={{ display: role === 'admin' || role === 'staff' || role === 'storefront' ? '' : 'none' }}>
           <h2 className="card-title">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
@@ -244,7 +277,12 @@ export default function StockOutClient() {
           {selected && (
             <div>
               <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.75rem' }}>Item Quantities & Sources</h4>
+                <h4 style={{ marginBottom: '0.5rem' }}>Order Lifecycle Timeline</h4>
+                <Timeline steps={CLIENT_STEPS} activeStep={activeStepIdx(selected.status)} handledBy={selected.handledBy || {}} />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ marginBottom: '0.75rem' }}>Item Quantities &amp; Sources</h4>
                 <DataTable
                   headers={['Item', 'Ordered', 'Collected', 'Rack Source']}
                   rows={selected.items.map((item) => (
@@ -256,11 +294,6 @@ export default function StockOutClient() {
                     </>
                   ))}
                 />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.5rem' }}>Order Lifecycle Timeline</h4>
-                <Timeline steps={CLIENT_STEPS} activeStep={activeStepIdx(selected.status)} />
               </div>
 
               <GlassCard style={{ margin: 0, background: 'rgba(255,255,255,0.02)' }}>

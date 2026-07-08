@@ -643,96 +643,144 @@ tr:hover td {
 .badge-info { background: var(--info-glow); color: #22d3ee; }
 .badge-muted { background: rgba(255, 255, 255, 0.05); color: var(--text-muted); }
 
-/* Timeline Stepper component */
+/* Timeline Stepper — Horizontal layout */
 .workflow-timeline {
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
   position: relative;
-  padding-left: 2rem;
-  margin-top: 1rem;
+  margin-bottom: 1.75rem;
+  padding: 0;
+  overflow-x: auto;
+  padding-bottom: 0.5rem;
 }
 
-.workflow-timeline::before {
-  content: '';
-  position: absolute;
-  left: 8px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background-color: var(--border-color);
-}
-
+/* connector line drawn as a pseudo-element of each step except the last */
 .timeline-step {
   position: relative;
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+/* Horizontal connector bar between steps */
+.timeline-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 19px;
+  left: calc(50% + 19px);
+  right: calc(-50% + 19px);
+  height: 2px;
+  background: var(--border-color);
+  z-index: 0;
+  transition: var(--transition);
+}
+
+.timeline-step.completed:not(:last-child)::after {
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success-glow);
+}
+
+.timeline-step.active:not(:last-child)::after,
+.timeline-step.discrepancy:not(:last-child)::after {
+  background: linear-gradient(to right, var(--primary), var(--border-color));
 }
 
 .timeline-bullet {
-  position: absolute;
-  left: -2rem;
-  width: 18px;
-  height: 18px;
+  position: relative;
+  z-index: 2;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background-color: var(--bg-main);
   border: 2px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
   transition: var(--transition);
+  margin-bottom: 0.6rem;
+  flex-shrink: 0;
 }
 
 .timeline-step.active .timeline-bullet {
   border-color: var(--primary);
-  background-color: var(--primary);
-  box-shadow: 0 0 10px var(--primary-glow);
+  background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+  color: white;
+  box-shadow: 0 0 14px var(--primary-glow);
 }
 
 .timeline-step.completed .timeline-bullet {
   border-color: var(--success);
-  background-color: var(--success);
-  box-shadow: 0 0 10px var(--success-glow);
+  background: linear-gradient(135deg, var(--success), #059669);
+  color: white;
+  box-shadow: 0 0 12px var(--success-glow);
 }
 
 .timeline-step.discrepancy .timeline-bullet {
   border-color: var(--danger);
-  background-color: var(--danger);
-  box-shadow: 0 0 10px var(--danger-glow);
+  background: linear-gradient(135deg, var(--danger), #dc2626);
+  color: white;
+  box-shadow: 0 0 12px var(--danger-glow);
 }
 
 .timeline-content {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 1rem;
+  padding: 0 0.25rem;
   transition: var(--transition);
-}
-
-.timeline-step.active .timeline-content {
-  border-color: var(--primary-glow);
-  background: rgba(99, 102, 241, 0.03);
+  background: transparent;
+  border: none;
 }
 
 .timeline-title {
   font-family: var(--font-title);
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   font-weight: 600;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.3rem;
+  line-height: 1.3;
+  color: var(--text-muted);
+}
+
+.timeline-step.active .timeline-title,
+.timeline-step.completed .timeline-title {
+  color: var(--text-main);
+}
+
+.timeline-step.active .timeline-title {
+  color: #a5b4fc;
+}
+
+.timeline-step.discrepancy .timeline-title {
+  color: #f87171;
 }
 
 .timeline-desc {
-  font-size: 0.85rem;
+  font-size: 0.72rem;
   color: var(--text-muted);
-  margin-top: 0.35rem;
+  margin-top: 0.25rem;
+  line-height: 1.4;
+  display: none; /* hidden by default in horizontal; shown on active */
+}
+
+.timeline-step.active .timeline-desc {
+  display: block;
+  color: rgba(165, 180, 252, 0.75);
 }
 
 .timeline-meta {
-  margin-top: 0.75rem;
+  margin-top: 0.5rem;
   display: flex;
-  gap: 1rem;
-  font-size: 0.8rem;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
 }
 
 /* Modal Popup container */

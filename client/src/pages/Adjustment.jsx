@@ -11,7 +11,7 @@ import Modal from '../components/shared/Modal';
 const ROLE_LABELS = { admin: 'Administrator', staff: 'Stock Room Staff', storefront: 'Store Front Staff' };
 
 export default function Adjustment() {
-  const { role } = useOutletContext();
+  const { role, user } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [adjustments, setAdjustments] = useState([]);
@@ -37,7 +37,7 @@ export default function Adjustment() {
     if (!prod) return;
     const adjs = [...adjustments];
     const adjId = 'ADJ-' + (1000 + adjs.length + 1);
-    adjs.unshift({ id: adjId, date: new Date().toISOString(), type, productId: prodId, productName: prod.name, quantity: qty, status: 'Requested' });
+    adjs.unshift({ id: adjId, date: new Date().toISOString(), type, productId: prodId, productName: prod.name, quantity: qty, status: 'Requested', requestedBy: user.username });
     await api.set('adjustments', adjs);
     setAdjustments(adjs);
     const notifs = await api.get('notifications') || [];
@@ -71,6 +71,7 @@ export default function Adjustment() {
         }
         a.status = 'Completed';
         a.rackFlipped = fulfillRack;
+        a.fulfilledBy = user.username;
       }
       return a;
     });
@@ -156,8 +157,8 @@ export default function Adjustment() {
                 <td>{a.type === 'In' ? <Badge variant="success">Stock In</Badge> : <Badge variant="danger">Stock Out</Badge>}</td>
                 <td>{a.productName}</td>
                 <td>{a.quantity}</td>
-                <td>{a.status === 'Requested' ? <Badge variant="warning">Awaiting Storage</Badge> : <Badge variant="success">Completed</Badge>}</td>
-                <td>{a.status === 'Requested' ? (role === 'staff' ? <Button variant="primary" size="sm" onClick={() => openFulfill(a)}>Process Action</Button> : <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Stock Room</span>) : '-'}</td>
+                <td>{a.status === 'Requested' ? <Badge variant="warning">Awaiting Storage</Badge> : <Badge variant="success">Completed{a.fulfilledBy ? ` · ${a.fulfilledBy}` : ''}</Badge>}</td>
+                <td>{a.status === 'Requested' ? ((role === 'staff' || role === 'storefront') ? <Button variant="primary" size="sm" onClick={() => openFulfill(a)}>Process Action</Button> : <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Stock Room</span>) : '-'}</td>
               </>
             ))}
             emptyMessage="No stock adjustments recorded."

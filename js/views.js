@@ -644,23 +644,28 @@ function renderConversionView() {
     prodSelect.appendChild(opt);
   });
 
-  document.getElementById("conversion-meters").value = "";
-  document.getElementById("conversion-cut-length").value = "1.09361";
+  document.getElementById("conversion-input-unit").value = "Meters";
+  document.getElementById("conversion-amount").value = "";
+  document.getElementById("conversion-target-unit").value = "Yards";
+  document.getElementById("conversion-cut-length").value = "1.0";
   document.getElementById("conversion-estimated").value = "0";
   document.getElementById("conversion-actual").value = "";
 
   const tbody = document.getElementById("conversions-tbody");
   if (conversions.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="7" class="no-data">No roll conversions recorded.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No roll conversions recorded.</td></tr>';
     return;
   }
   tbody.innerHTML = conversions.map(c => {
     const date = new Date(c.date).toLocaleDateString();
+    const inputDisplay = c.inputAmount ? `${c.inputAmount} ${c.inputUnit}` : `${c.metersDeducted} Meters`;
+    const targetDisplay = c.cutLength ? `${c.cutLength} ${c.targetUnit}` : "-";
     return `
       <tr>
         <td>${date}</td>
         <td><strong>${c.productName}</strong></td>
-        <td>${c.metersDeducted}m</td>
+        <td>${inputDisplay}</td>
+        <td>${targetDisplay}</td>
         <td>${c.estimatedRolls} rolls</td>
         <td>${c.actualRolls} rolls</td>
         <td><strong>${c.conversionRate.toFixed(1)}%</strong></td>
@@ -671,13 +676,20 @@ function renderConversionView() {
 
 function onConversionInputsChange() {
   const productId = document.getElementById("conversion-product").value;
-  const meters = parseFloat(document.getElementById("conversion-meters").value);
+  const inputUnit = document.getElementById("conversion-input-unit").value;
+  const inputAmount = parseFloat(document.getElementById("conversion-amount").value);
+  const targetUnit = document.getElementById("conversion-target-unit").value;
   const cutLength = parseFloat(document.getElementById("conversion-cut-length").value);
-  if (!productId || isNaN(meters) || meters <= 0 || isNaN(cutLength) || cutLength <= 0) {
+
+  if (!productId || isNaN(inputAmount) || inputAmount <= 0 || isNaN(cutLength) || cutLength <= 0 || typeof UNIT_RATES === 'undefined') {
     document.getElementById("conversion-estimated").value = "0";
     return;
   }
-  const estimated = Math.floor((meters * 1.09361) / cutLength);
+
+  const inputToMeters = inputAmount / UNIT_RATES[inputUnit];
+  const targetAmount = inputToMeters * UNIT_RATES[targetUnit];
+  const estimated = Math.floor(targetAmount / cutLength);
+  
   document.getElementById("conversion-estimated").value = estimated;
 }
 

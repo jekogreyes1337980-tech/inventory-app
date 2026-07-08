@@ -584,9 +584,7 @@
               <div
                 style="border-left:3px solid var(--info); background:rgba(6,182,212,0.04); padding:1rem; border-radius: var(--radius-md); margin-bottom:1.5rem;">
                 <p style="font-size: 0.85rem; line-height: 1.4; color: var(--text-muted);">
-                  <strong>Note:</strong> Bulk product rolls are measured and purchased in **Meters**. Storefront pre-cut
-                  rolls are sold and measured in **Yards**. The system estimates output rolls based on `1 Meter =
-                  1.09361 Yards`.
+                  <strong>Note:</strong> Bulk product rolls are globally measured in <strong>Meters</strong> in the Stock Room. Storefront pre-cut rolls are sold by counts. This tool converts your extracted lengths back to Meters to properly deduct from the Stock Room.
                 </p>
               </div>
 
@@ -598,20 +596,43 @@
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="conversion-meters">Length to Cut (Meters)</label>
-                    <input type="number" step="0.1" id="conversion-meters" placeholder="e.g. 5"
-                      oninput="onConversionInputsChange()">
+                    <label for="conversion-input-unit">Input Unit (From Stock Room)</label>
+                    <select id="conversion-input-unit" onchange="onConversionInputsChange()">
+                      <option value="Meters" selected>Meters</option>
+                      <option value="Yards">Yards</option>
+                      <option value="Feet">Feet</option>
+                      <option value="Inches">Inches</option>
+                      <option value="Centimeters">Centimeters</option>
+                    </select>
                   </div>
                   <div class="form-group">
-                    <label for="conversion-cut-length">Pre-cut Target Length (Yards)</label>
-                    <input type="number" step="0.1" id="conversion-cut-length" value="1.0"
+                    <label for="conversion-amount">Extracted Length</label>
+                    <input type="number" step="0.01" id="conversion-amount" placeholder="e.g. 5"
                       oninput="onConversionInputsChange()">
                   </div>
                 </div>
 
                 <div class="form-row">
                   <div class="form-group">
-                    <label for="conversion-estimated">Estimated Rolls Output (Yards)</label>
+                    <label for="conversion-target-unit">Target Pre-cut Unit</label>
+                    <select id="conversion-target-unit" onchange="onConversionInputsChange()">
+                      <option value="Meters">Meters</option>
+                      <option value="Yards" selected>Yards</option>
+                      <option value="Feet">Feet</option>
+                      <option value="Inches">Inches</option>
+                      <option value="Centimeters">Centimeters</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label for="conversion-cut-length">Length per Roll</label>
+                    <input type="number" step="0.01" id="conversion-cut-length" value="1.0"
+                      oninput="onConversionInputsChange()">
+                  </div>
+                </div>
+
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="conversion-estimated">Estimated Rolls Output</label>
                     <input type="number" id="conversion-estimated" readonly
                       style="background: rgba(255,255,255,0.02); font-weight:600; color: var(--info);">
                   </div>
@@ -643,7 +664,8 @@
                     <tr>
                       <th>Date</th>
                       <th>Product</th>
-                      <th>Cut Length</th>
+                      <th>Extraction</th>
+                      <th>Target/Roll</th>
                       <th>Est Output</th>
                       <th>Act Output</th>
                       <th>Rate</th>

@@ -6,14 +6,24 @@ import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
 
+const UNIT_RATES = {
+  'Meters': 1,
+  'Yards': 1.09361,
+  'Feet': 3.28084,
+  'Inches': 39.3701,
+  'Centimeters': 100,
+};
+
 export default function Conversion() {
   const { role } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [conversions, setConversions] = useState([]);
   const [selectedProd, setSelectedProd] = useState('');
-  const [meters, setMeters] = useState('');
-  const [cutLength, setCutLength] = useState('1.09361');
+  const [inputUnit, setInputUnit] = useState('Meters');
+  const [inputAmount, setInputAmount] = useState('');
+  const [targetUnit, setTargetUnit] = useState('Yards');
+  const [cutLength, setCutLength] = useState('1');
   const [actual, setActual] = useState('');
 
   const rollProducts = products.filter((p) => p.unit === 'rolls/meters');
@@ -26,39 +36,48 @@ export default function Conversion() {
   }, []);
 
   const estimated = (() => {
-    const m = parseFloat(meters);
+    const inputQty = parseFloat(inputAmount);
     const cl = parseFloat(cutLength);
-    if (!selectedProd || isNaN(m) || m <= 0 || isNaN(cl) || cl <= 0) return 0;
-    return Math.floor((m * 1.09361) / cl);
+    if (!selectedProd || isNaN(inputQty) || inputQty <= 0 || isNaN(cl) || cl <= 0) return 0;
+    
+    // Convert input amount to target unit
+    const inputToMeters = inputQty / UNIT_RATES[inputUnit];
+    const targetAmount = inputToMeters * UNIT_RATES[targetUnit];
+    return Math.floor(targetAmount / cl);
   })();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     const prod = products.find((p) => p.id === selectedProd);
     if (!prod) return;
-    const m = parseFloat(meters);
+    const inputQty = parseFloat(inputAmount);
     const cl = parseFloat(cutLength);
     const act = parseInt(actual);
     const est = estimated;
 
-    if (!selectedProd || isNaN(m) || m <= 0 || isNaN(cl) || cl <= 0 || isNaN(act) || act < 0) {
+    if (!selectedProd || isNaN(inputQty) || inputQty <= 0 || isNaN(cl) || cl <= 0 || isNaN(act) || act < 0) {
       Swal.fire({ icon: 'warning', title: 'Please fill all details with valid positive parameters.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
       return;
     }
-    if (prod.stockRoomQty < m) {
-      Swal.fire({ icon: 'error', title: 'Insufficient roll meters in stock room (' + prod.stockRoomQty + 'm available).', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+
+    const deductedMeters = inputQty / UNIT_RATES[inputUnit];
+
+    if (prod.stockRoomQty < deductedMeters) {
+      Swal.fire({ icon: 'error', title: 'Insufficient roll meters in stock room (' + prod.stockRoomQty.toFixed(2) + 'm available).', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
       return;
     }
 
     const rate = est > 0 ? (act / est) * 100 : 100;
-    prod.stockRoomQty -= m;
+    prod.stockRoomQty -= deductedMeters;
     prod.storefrontQty += act;
     const convs = [...conversions];
     convs.unshift({
       id: 'CONV-' + (100 + convs.length + 1),
       date: new Date().toISOString(),
       productId: prod.id, productName: prod.name,
-      metersDeducted: m, estimatedRolls: est,
+      inputAmount: inputQty, inputUnit: inputUnit, 
+      targetUnit: targetUnit, cutLength: cl,
+      metersDeducted: deductedMeters, estimatedRolls: est,
       actualRolls: act, conversionRate: rate,
       operator: role === 'admin' ? 'Administrator' : role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff',
     });
@@ -68,7 +87,7 @@ export default function Conversion() {
     setProducts([...products]);
     setConversions(convs);
     Swal.fire({ icon: 'success', title: 'Roll stock conversion completed successfully!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-    setMeters('');
+    setInputAmount('');
     setActual('');
   };
 
@@ -88,7 +107,7 @@ export default function Conversion() {
 
           <div style={{ borderLeft: '3px solid var(--info)', background: 'rgba(6,182,212,0.04)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
             <p style={{ fontSize: '0.85rem', lineHeight: 1.4, color: 'var(--text-muted)' }}>
-              <strong>Note:</strong> Bulk product rolls are measured and purchased in Meters. Storefront pre-cut rolls are sold and measured in Yards. The system estimates output rolls based on <code>1 Meter = 1.09361 Yards</code>.
+              <strong>Note:</strong> Bulk product rolls are globally measured in <strong>Meters</strong> in the Stock Room. Storefront pre-cut rolls are sold by counts. This tool converts your extracted lengths back to Meters to properly deduct from the Stock Room.
             </p>
           </div>
 
@@ -105,18 +124,33 @@ export default function Conversion() {
 
             <div className="form-row">
               <div className="form-group">
-                <label>Length to Cut (Meters)</label>
-                <input type="number" step="0.1" value={meters} onChange={(e) => setMeters(e.target.value)} placeholder="e.g. 5" />
+                <label>Input Unit (From Stock Room)</label>
+                <select value={inputUnit} onChange={(e) => setInputUnit(e.target.value)}>
+                  {Object.keys(UNIT_RATES).map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
               </div>
               <div className="form-group">
-                <label>Pre-cut Target Length (Yards)</label>
-                <input type="number" step="0.1" value={cutLength} onChange={(e) => setCutLength(e.target.value)} />
+                <label>Extracted Length</label>
+                <input type="number" step="0.01" value={inputAmount} onChange={(e) => setInputAmount(e.target.value)} placeholder="e.g. 5" />
               </div>
             </div>
 
             <div className="form-row">
               <div className="form-group">
-                <label>Estimated Rolls Output (Yards)</label>
+                <label>Target Pre-cut Unit</label>
+                <select value={targetUnit} onChange={(e) => setTargetUnit(e.target.value)}>
+                  {Object.keys(UNIT_RATES).map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Length per Roll</label>
+                <input type="number" step="0.01" value={cutLength} onChange={(e) => setCutLength(e.target.value)} placeholder="e.g. 1.0" />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label>Estimated Rolls Output</label>
                 <input type="number" readOnly value={estimated} style={{ background: 'rgba(255,255,255,0.02)', fontWeight: 600, color: 'var(--info)' }} />
               </div>
               <div className="form-group">
@@ -140,12 +174,13 @@ export default function Conversion() {
             Conversion Logs
           </h2>
           <DataTable
-            headers={['Date', 'Product', 'Cut Length', 'Est Output', 'Act Output', 'Rate', 'Staff']}
+            headers={['Date', 'Product', 'Extraction', 'Target/Roll', 'Est Output', 'Act Output', 'Rate', 'Staff']}
             rows={conversions.map((c) => (
               <>
                 <td>{new Date(c.date).toLocaleDateString()}</td>
                 <td><strong>{c.productName}</strong></td>
-                <td>{c.metersDeducted}m</td>
+                <td>{c.inputAmount ? `${c.inputAmount} ${c.inputUnit}` : `${c.metersDeducted} Meters`}</td>
+                <td>{c.cutLength ? `${c.cutLength} ${c.targetUnit}` : '-'}</td>
                 <td>{c.estimatedRolls} rolls</td>
                 <td>{c.actualRolls} rolls</td>
                 <td><strong>{c.conversionRate.toFixed(1)}%</strong></td>

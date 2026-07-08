@@ -11,15 +11,15 @@ import Timeline from '../components/shared/Timeline';
 const ROLE_LABELS = { admin: 'Administrator', staff: 'Stock Room Staff', storefront: 'Store Front Staff' };
 
 const SUPPLY_STEPS = [
-  { title: 'Supply Order Drafted', desc: 'Admin initialized the supply order.' },
-  { title: 'Forwarded to Staff', desc: 'Order forwarded to Stock Staff to confirm delivery.' },
-  { title: 'Deliveries Received & Racked', desc: 'Stock Staff inputted delivery quantities & rack positions.' },
-  { title: 'Discrepancies Checked', desc: 'Admin verified matching counts vs ordered amounts.' },
-  { title: 'Stock Process Closed', desc: 'Inventory updated. Discrepancies resolved or archived.' },
+  { title: 'Order Drafted', desc: 'Admin initialized the supply order.', handledKey: null },
+  { title: 'Forwarded to Staff', desc: 'Order forwarded to confirm delivery.', handledKey: null },
+  { title: 'Delivered & Racked', desc: 'Staff inputted quantities & rack positions.', handledKey: 'confirmedBy' },
+  { title: 'Discrepancy Check', desc: 'Admin verified counts vs ordered amounts.', handledKey: null },
+  { title: 'Process Closed', desc: 'Inventory updated. Discrepancies resolved.', handledKey: null },
 ];
 
 export default function StockIn() {
-  const { role } = useOutletContext();
+  const { role, user } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -70,7 +70,7 @@ export default function StockIn() {
 
     const orders = [...supplyOrders];
     const orderId = 'SO-' + (1000 + orders.length + 1);
-    orders.unshift({ id: orderId, supplier, dateCreated: new Date().toISOString(), status: 'Draft', items: selectedItems });
+    orders.unshift({ id: orderId, supplier, dateCreated: new Date().toISOString(), status: 'Draft', items: selectedItems, handledBy: { draftedBy: user?.username } });
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
     setSelectedOrderId(orderId);
@@ -107,13 +107,15 @@ export default function StockIn() {
       }
     }
     order.status = 'Staff Checked';
+    if (!order.handledBy) order.handledBy = {};
+    order.handledBy.confirmedBy = user?.username;
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
 
     const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Verification required on received items for ' + orderId + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
+    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Verification required on received items for ' + orderId + '. Confirmed by ' + user?.username + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Deliveries recorded. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Deliveries recorded by ' + user?.username + '. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleClose = async (orderId) => {
@@ -223,11 +225,12 @@ export default function StockIn() {
       return <div style={{ color: 'var(--text-muted)' }}>Awaiting confirmation inputs from Stock Room Staff...</div>;
     }
 
-    if (role === 'staff') {
+    if (role === 'staff' || role === 'storefront') {
+      const roleLabel = role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff';
       if (selected.status === 'For Staff Confirmation' || selected.status === 'Reviewed Discrepancy (Correction)') {
         return (
           <div>
-            <h4>Record Delivered Stocks (Stock Room Staff)</h4>
+            <h4>Record Delivered Stocks ({roleLabel})</h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Input actual counts received and choose storage racks:</p>
             <div style={{ marginBottom: '1.25rem' }}>
               {selected.items.map((item) => (
@@ -245,12 +248,11 @@ export default function StockIn() {
         );
       }
       if (selected.status === 'Staff Checked') {
-        return <div style={{ color: 'var(--text-muted)' }}>Deliveries recorded. Awaiting administrator discrepancies checks...</div>;
+        const confirmedBy = (selected.handledBy || {}).confirmedBy;
+        return <div style={{ color: 'var(--text-muted)' }}>Deliveries recorded{confirmedBy && <> by <strong style={{ color: 'var(--success)' }}>{confirmedBy}</strong></>}. Awaiting administrator discrepancy check...</div>;
       }
-      return <div style={{ color: 'var(--text-muted)' }}>This order is not currently requiring Stock Staff action.</div>;
+      return <div style={{ color: 'var(--text-muted)' }}>This order does not currently require action.</div>;
     }
-
-    return <div style={{ color: 'var(--text-muted)' }}>Stock In workflow is managed exclusively by Admins and Stock Room Staff.</div>;
   };
 
   return (
@@ -327,6 +329,17 @@ export default function StockIn() {
           {selected && (
             <div>
               <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ marginBottom: '0.5rem' }}>Flow Timeline</h4>
+                <Timeline
+                  steps={SUPPLY_STEPS}
+                  activeStep={activeStepIdx(selected.status)}
+                  discrepancy={selected.status.includes('Discrepancy')}
+                  activeLabel={selected.status === 'Closed (Refunded)' ? 'Discrepancies tagged as REFUNDED.' : selected.status === 'Closed' ? 'Closed. Stock levels updated.' : undefined}
+                  handledBy={selected.handledBy || {}}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
                 <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
                 <DataTable
                   headers={['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
@@ -342,16 +355,6 @@ export default function StockIn() {
                       </>
                     );
                   })}
-                />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.5rem' }}>Flow Timeline</h4>
-                <Timeline
-                  steps={SUPPLY_STEPS}
-                  activeStep={activeStepIdx(selected.status)}
-                  discrepancy={selected.status.includes('Discrepancy')}
-                  activeLabel={selected.status === 'Closed (Refunded)' ? 'Order completed with discrepancies tagged as REFUNDED.' : selected.status === 'Closed' ? 'Order closed successfully. Stock levels updated.' : undefined}
                 />
               </div>
 

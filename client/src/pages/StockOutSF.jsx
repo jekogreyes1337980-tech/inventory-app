@@ -9,7 +9,7 @@ import Badge from '../components/shared/Badge';
 import Modal from '../components/shared/Modal';
 
 export default function StockOutSF() {
-  const { role } = useOutletContext();
+  const { role, user } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [requests, setRequests] = useState([]);
@@ -31,7 +31,7 @@ export default function StockOutSF() {
     const reqQty = prod.threshold * 2;
     const reqs = [...requests];
     const reqId = 'SF-REQ-' + (100 + reqs.length + 1);
-    reqs.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: reqQty, dateCreated: new Date().toISOString(), status: 'Pending' });
+    reqs.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: reqQty, dateCreated: new Date().toISOString(), status: 'Pending', requestedBy: user?.username });
     await api.set('storefrontRequests', reqs);
     setRequests(reqs);
     const notifs = await api.get('notifications') || [];
@@ -49,7 +49,7 @@ export default function StockOutSF() {
     if (!prod) return;
     const reqs = [...requests];
     const reqId = 'SF-REQ-' + (100 + reqs.length + 1);
-    reqs.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: qty, dateCreated: new Date().toISOString(), status: 'Pending' });
+    reqs.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: qty, dateCreated: new Date().toISOString(), status: 'Pending', requestedBy: user?.username });
     await api.set('storefrontRequests', reqs);
     setRequests(reqs);
     const notifs = await api.get('notifications') || [];
@@ -79,6 +79,7 @@ export default function StockOutSF() {
         }
         r.status = 'Completed';
         r.rackSource = selectedRack;
+        r.fulfilledBy = user?.username;
       }
       return r;
     });
@@ -177,8 +178,20 @@ export default function StockOutSF() {
                 <td>{r.productName}</td>
                 <td>{r.quantity}</td>
                 <td>{new Date(r.dateCreated).toLocaleDateString()}</td>
-                <td>{r.status === 'Pending' ? <Badge variant="warning">Pending Fulfillment</Badge> : <Badge variant="success">Completed</Badge>}</td>
-                <td>{r.status === 'Pending' ? (role === 'staff' ? <Button variant="primary" size="sm" onClick={() => openFulfill(r)}>Fulfill Movement</Button> : <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Stock Room Staff</span>) : '-'}</td>
+                <td>{r.status === 'Pending'
+                  ? <Badge variant="warning">Pending Fulfillment</Badge>
+                  : <Badge variant="success">Completed{r.fulfilledBy ? ` · ${r.fulfilledBy}` : ''}</Badge>}
+                </td>
+                <td>{r.status === 'Pending'
+                  ? (() => {
+                      const canFulfill = role === 'staff' || role === 'storefront';
+                      const isSelf = r.requestedBy && r.requestedBy === user?.username;
+                      if (canFulfill && !isSelf) return <Button variant="primary" size="sm" onClick={() => openFulfill(r)}>Fulfill Movement</Button>;
+                      if (isSelf) return <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>You created this</span>;
+                      return <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Awaiting Staff</span>;
+                    })()
+                  : '-'}
+                </td>
               </>
             ))}
             emptyMessage="No stock movement requests."

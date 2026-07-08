@@ -2,6 +2,14 @@
 // actions.js - All Workflow Action / Business Logic Functions
 // ============================================================
 
+const UNIT_RATES = {
+  'Meters': 1,
+  'Yards': 1.09361,
+  'Feet': 3.28084,
+  'Inches': 39.3701,
+  'Centimeters': 100,
+};
+
 // --- Supply Orders (Stock In) ---
 
 function adminCreateSupplyOrder(event) {
@@ -294,12 +302,14 @@ function completeClientDispatch(orderId) {
 function executeRollConversion(event) {
   event.preventDefault();
   const prodId = document.getElementById("conversion-product").value;
-  const meters = parseFloat(document.getElementById("conversion-meters").value);
+  const inputUnit = document.getElementById("conversion-input-unit").value;
+  const inputAmount = parseFloat(document.getElementById("conversion-amount").value);
+  const targetUnit = document.getElementById("conversion-target-unit").value;
   const cutLength = parseFloat(document.getElementById("conversion-cut-length").value);
   const actual = parseInt(document.getElementById("conversion-actual").value);
   const estimated = parseInt(document.getElementById("conversion-estimated").value);
 
-  if (!prodId || isNaN(meters) || meters <= 0 || isNaN(cutLength) || cutLength <= 0 || isNaN(actual) || actual < 0) {
+  if (!prodId || isNaN(inputAmount) || inputAmount <= 0 || isNaN(cutLength) || cutLength <= 0 || isNaN(actual) || actual < 0) {
     showToast("Please fill all details with valid positive parameters.", "warning");
     return;
   }
@@ -308,13 +318,15 @@ function executeRollConversion(event) {
   const prod = products.find(p => p.id === prodId);
   if (!prod) return;
 
-  if (prod.stockRoomQty < meters) {
-    showToast(`Insufficient roll meters in stock room (${prod.stockRoomQty}m available).`, "danger");
+  const deductedMeters = inputAmount / UNIT_RATES[inputUnit];
+
+  if (prod.stockRoomQty < deductedMeters) {
+    showToast(`Insufficient roll meters in stock room (${prod.stockRoomQty.toFixed(2)}m available).`, "danger");
     return;
   }
 
   const rate = estimated > 0 ? (actual / estimated) * 100 : 100;
-  prod.stockRoomQty -= meters;
+  prod.stockRoomQty -= deductedMeters;
   prod.storefrontQty += actual;
   DB.set("products", products);
 
@@ -323,7 +335,9 @@ function executeRollConversion(event) {
     id: "CONV-" + (100 + conversions.length + 1),
     date: new Date().toISOString(),
     productId: prodId, productName: prod.name,
-    metersDeducted: meters, estimatedRolls: estimated,
+    inputAmount: inputAmount, inputUnit: inputUnit,
+    targetUnit: targetUnit, cutLength: cutLength,
+    metersDeducted: deductedMeters, estimatedRolls: estimated,
     actualRolls: actual, conversionRate: rate,
     operator: getRoleName(currentRole)
   });
@@ -348,7 +362,7 @@ function adminSubmitAdjustment(event) {
 
   const adjustments = DB.get("adjustments") || [];
   const adjId = "ADJ-" + (1000 + adjustments.length + 1);
-  adjustments.unshift({ id: adjId, date: new Date().toISOString(), type, productId: prodId, productName: prod.name, quantity: qty, status: "Requested" });
+  adjustments.unshift({ id: adjId, date: new Date().toISOString(), type, productId: prodId, productName: prod.name, quantity: qty, status: "Requested", requestedBy: currentUser.username });
   DB.set("adjustments", adjustments);
   pushNotification(`Inventory Adjustment ${type} Requested`, `Fulfill: ${type === "In" ? "Put in" : "Get out"} ${qty} units of ${prod.name} in Stock Room.`, "staff", { tab: "adjustment" });
   showToast(`Adjustment Request ${adjId} logged.`, "success");
