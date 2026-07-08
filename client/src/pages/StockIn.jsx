@@ -289,7 +289,7 @@ export default function StockIn() {
               </div>
               <div className="form-row" style={{ marginBottom: '0.5rem' }}>
                 <input type="text" name="supplierPhone" placeholder="Phone Number (Optional)" style={{ flex: 1 }} />
-                <input type="email" name="supplierEmail" placeholder="Email Address (Optional)" style={{ flex: 1 }} />
+                <input type="text" name="supplierEmail" placeholder="Email Address (Optional)" style={{ flex: 1 }} />
               </div>
               <input type="text" name="supplierAddress" placeholder="Physical Address (Optional)" style={{ width: '100%' }} />
             </div>

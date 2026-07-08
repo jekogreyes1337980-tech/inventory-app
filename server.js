@@ -17,9 +17,6 @@ app.use(express.json({ limit: '10mb' })); // Support large JSON payloads
 // In production, serve the built React app
 if (isProduction) {
   app.use(express.static(path.join(__dirname, 'client', 'dist')));
-} else {
-  // In development, serve static files from the project root (legacy support)
-  app.use(express.static(__dirname));
 }
 
 let db;
