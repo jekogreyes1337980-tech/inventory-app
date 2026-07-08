@@ -297,8 +297,16 @@
               </h2>
               <form onsubmit="adminCreateSupplyOrder(event)">
                 <div class="form-group">
-                  <label for="supply-order-supplier">Supplier Details</label>
-                  <input type="text" id="supply-order-supplier" placeholder="Enter supplier name or details" required>
+                  <label>Supplier Details</label>
+                  <div class="form-row" style="margin-bottom:0.5rem;">
+                    <input type="text" id="supply-order-supplier-name" placeholder="Supplier Name" required>
+                    <input type="text" id="supply-order-supplier-contact" placeholder="Contact Person (Optional)">
+                  </div>
+                  <div class="form-row" style="margin-bottom:0.5rem;">
+                    <input type="text" id="supply-order-supplier-phone" placeholder="Phone Number (Optional)">
+                    <input type="email" id="supply-order-supplier-email" placeholder="Email Address (Optional)">
+                  </div>
+                  <input type="text" id="supply-order-supplier-address" placeholder="Physical Address (Optional)" style="width:100%;">
                 </div>
 
                 <div class="form-group">

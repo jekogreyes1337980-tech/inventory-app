@@ -56,7 +56,21 @@ export default function StockIn() {
   const handleCreateOrder = async (e) => {
     e.preventDefault();
     const form = e.target;
-    const supplier = form.supplier.value;
+    
+    const supplierName = form.supplierName.value;
+    const supplierContact = form.supplierContact.value;
+    const supplierPhone = form.supplierPhone.value;
+    const supplierEmail = form.supplierEmail.value;
+    const supplierAddress = form.supplierAddress.value;
+    
+    let supplier = supplierName;
+    const parts = [];
+    if (supplierContact) parts.push(`Contact: ${supplierContact}`);
+    if (supplierPhone) parts.push(`Phone: ${supplierPhone}`);
+    if (supplierEmail) parts.push(`Email: ${supplierEmail}`);
+    if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
+    if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
+    
     const selectedItems = [];
     products.forEach((p) => {
       const chk = form[`chk-${p.id}`];
@@ -269,7 +283,15 @@ export default function StockIn() {
           <form onSubmit={handleCreateOrder}>
             <div className="form-group">
               <label>Supplier Details</label>
-              <input type="text" name="supplier" placeholder="Enter supplier name or details" required />
+              <div className="form-row" style={{ marginBottom: '0.5rem' }}>
+                <input type="text" name="supplierName" placeholder="Supplier Name" required style={{ flex: 1 }} />
+                <input type="text" name="supplierContact" placeholder="Contact Person (Optional)" style={{ flex: 1 }} />
+              </div>
+              <div className="form-row" style={{ marginBottom: '0.5rem' }}>
+                <input type="text" name="supplierPhone" placeholder="Phone Number (Optional)" style={{ flex: 1 }} />
+                <input type="email" name="supplierEmail" placeholder="Email Address (Optional)" style={{ flex: 1 }} />
+              </div>
+              <input type="text" name="supplierAddress" placeholder="Physical Address (Optional)" style={{ width: '100%' }} />
             </div>
             <div className="form-group">
               <label>Select Items & Quantities</label>

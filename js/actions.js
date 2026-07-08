@@ -14,7 +14,20 @@ const UNIT_RATES = {
 
 function adminCreateSupplyOrder(event) {
   event.preventDefault();
-  const supplier = document.getElementById("supply-order-supplier").value;
+  const supplierName = document.getElementById("supply-order-supplier-name").value;
+  const supplierContact = document.getElementById("supply-order-supplier-contact").value;
+  const supplierPhone = document.getElementById("supply-order-supplier-phone").value;
+  const supplierEmail = document.getElementById("supply-order-supplier-email").value;
+  const supplierAddress = document.getElementById("supply-order-supplier-address").value;
+  
+  let supplier = supplierName;
+  const parts = [];
+  if (supplierContact) parts.push(`Contact: ${supplierContact}`);
+  if (supplierPhone) parts.push(`Phone: ${supplierPhone}`);
+  if (supplierEmail) parts.push(`Email: ${supplierEmail}`);
+  if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
+  if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
+
   const products = DB.get("products") || [];
 
   const selectedItems = [];
