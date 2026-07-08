@@ -1,0 +1,121 @@
+COMMIT CHANGES SUMMARY
+======================
+Date: 2026-07-06
+Commits: 2 new commits from collaborator
+Source: github.com/jekogreyes1337980-tech/inventory-app
+
+======================================================
+COMMIT 1: "refactor: migrate to Node.js backend and split app.js into modules"
+======================================================
+
+WHAT CHANGED:
+- The original app.js (1943 lines) was broken up into 4 smaller files.
+
+NEW FILES CREATED:
+------------------
+
+1. js/db.js
+   - Replaces localStorage with API calls
+   - DB.get(key)  → calls GET  /api/data/:key
+   - DB.set(key)  → calls POST /api/data/:key
+   - DB.reset()   → calls POST /api/reset
+   - DB.init()    → seeds default data if nothing exists
+
+2. js/ui.js
+   - showToast()                → pop-up notification messages
+   - getRoleName()              → converts role key to readable name
+   - pushNotification()         → sends notification to a role's inbox
+   - updateNotificationIndicator() → toggles red dot on bell
+   - toggleNotificationInbox()  → opens/closes notification panel
+   - renderNotificationInbox()  → renders messages per role
+   - markNotifRead()            → marks a notification as read + navigates
+   - clearAllNotifications()    → marks all current role notifs as read [NEW]
+
+3. js/views.js
+   - renderDashboardView()
+   - renderInventoryView()
+   - renderStockInView()
+   - renderStockOutSFView()
+   - renderStockOutClientView()
+   - renderConversionView()
+   - renderAdjustmentView()
+   - (All view/render logic moved here from the old app.js)
+
+4. js/actions.js
+   - All form submit handlers and action button functions moved here:
+   - adminForwardSupplyOrder()
+   - adminCloseSupplyOrder()
+   - adminOpenDiscrepancyReview()
+   - adminSettleRefund()
+   - adminSettleCorrection()
+   - staffSubmitSupplyVerification()
+   - storefrontRequestReplenish()
+   - adminSubmitSFRequest()
+   - openSFMovementFulfillmentModal()
+   - fulfillSFMovement()
+   - createClientOrder()
+   - staffSubmitClientCollection()
+   - storefrontVerifyClientOrder()
+   - completeClientDispatch()
+   - executeRollConversion()
+   - adminSubmitAdjustment()
+   - fulfillAdjustment()
+
+MODIFIED FILES:
+---------------
+- js/app.js  → Now only 96 lines (was 1943). Just entry point + navigation router.
+- index.html → Updated <script> tags to load the 4 new module files
+
+======================================================
+COMMIT 2: "Migrate backend to use SQLite"
+======================================================
+
+NEW FILES CREATED:
+------------------
+
+1. server.js (Node.js + Express backend)
+   - GET  /api/data/:key  → reads a key from SQLite database
+   - POST /api/data/:key  → writes/updates a key in SQLite database
+   - POST /api/reset      → wipes all data from SQLite database
+   - Serves all static files (HTML, CSS, JS) from the project folder
+   - Runs on http://localhost:3000
+
+2. package.json
+   - Lists dependencies: express, sqlite3, sqlite, cors
+   - Run "npm install" to install them
+
+3. data.db (auto-created on first run)
+   - SQLite database file
+   - Stores all inventory data in a single table: store(key, value)
+
+======================================================
+WHAT THIS MEANS FOR THE PROJECT
+======================================================
+
+BEFORE these commits:
+- All data was saved in browser localStorage (single device only)
+- Everything was in one giant app.js file
+- No server, just open index.html in a browser
+
+AFTER these commits:
+- Data is saved in a real SQLite database file (data.db)
+- Multiple users/devices can share the same data
+- Code is split into clean modules (easier to work on)
+- Must run "node server.js" and open http://localhost:3000
+
+======================================================
+FEATURES NOT YET BUILT (PLANNED)
+======================================================
+
+1. Login System (collaborator is working on this)
+   - Replace the "Simulate Role" dropdown with real user accounts
+   - Each user logs in and gets their role automatically
+
+2. Ticket Assignment by Admin
+   - Admin assigns specific staff to a Stock In or Stock Out ticket
+   - Only the assigned staff can modify the ticket
+
+3. Ticket Locking (No Simultaneous Editing)
+   - Only one person can work on a ticket at a time
+   - Prevents conflicting changes and maintains accountability
+

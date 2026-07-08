@@ -1,0 +1,38 @@
+INVENTORY SYSTEM UPGRADE: WHAT'S NEW (Client Presentation Guide)
+================================================================
+
+We have completed a major structural upgrade to the inventory system. Here is a simple, non-technical breakdown of the improvements we have made and what they mean for the business.
+
+---
+
+1. REPLACING THE "OFFLINE" DATABASE WITH A REAL SERVER
+------------------------------------------------------
+* What it was: Previously, all system data (inventory counts, orders, logs) was stored only in the browser's temporary memory (local storage). If someone cleared their browser cache or used a different computer, the data was gone.
+* What it is now: We have migrated to a professional backend server (Node.js) and a real database (SQLite). 
+* Why this matters:
+  - Reliability: Data is now securely saved in a permanent database file.
+  - Multi-user support: Multiple employees (Administrators, Stock Room Staff, and Storefront Staff) can now access, edit, and share the exact same inventory logs in real time from different devices.
+
+---
+
+2. IMPROVING SYSTEM PERFORMANCE AND SECURITY
+--------------------------------------------
+* What we did: We took the entire application and cleaned up the internal code, breaking it down into organized modules (database handling, screen interfaces, and button actions).
+* Why this matters: 
+  - Stability: The system runs smoother and loads faster.
+  - Easier updates: It is much simpler to add new features or troubleshoot specific parts of the app without affecting the rest of the program.
+
+---
+
+3. ROADMAP: WHAT WE ARE BUILDING NEXT
+--------------------------------------
+With the database server now in place, we are set up to implement the next major features:
+
+* Real Login Accounts:
+  We will replace the temporary "Simulate Role" dropdown with secure, personal user logins. Employees will log in with their own credentials, and the system will automatically show their allowed views.
+
+* Staff Assignment & Responsibility Tracking:
+  Administrators will have the sole power to assign specific tickets (Stock In deliveries or Stock Out orders) to selected staff members. 
+
+* Prevention of Editing Conflicts (Locking):
+  To eliminate human errors and double-entry mistakes, the system will lock a ticket while a staff member is actively working on it. This ensures only one person is responsible for the count and status of that ticket at any given time.

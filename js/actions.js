@@ -27,7 +27,7 @@ function adminCreateSupplyOrder(event) {
 
   const supplyOrders = DB.get("supplyOrders") || [];
   const orderId = "SO-" + (1000 + supplyOrders.length + 1);
-  supplyOrders.unshift({ id: orderId, supplier, dateCreated: new Date().toISOString(), status: "Draft", items: selectedItems });
+  supplyOrders.unshift({ id: orderId, supplier, dateCreated: new Date().toISOString(), status: "Draft", items: selectedItems, handledBy: { draftedBy: currentUser.username } });
   DB.set("supplyOrders", supplyOrders);
 
   showToast(`Supply Order ${orderId} created as Draft!`, "success");
@@ -65,9 +65,11 @@ function staffSubmitDeliveries(orderId) {
   }
 
   order.status = "Staff Checked";
+  if (!order.handledBy) order.handledBy = {};
+  order.handledBy.confirmedBy = currentUser.username;
   DB.set("supplyOrders", orders);
   pushNotification("Delivery Logs Ready for Check", `Verification required on received items for Supply Order ${orderId}.`, "admin", { tab: "stock-in", supplyOrderId: orderId });
-  showToast("Deliveries recorded. Forwarded to Admin.", "success");
+  showToast(`Deliveries recorded by ${currentUser.username}. Forwarded to Admin.`, "success");
   onSupplyOrderSelected();
 }
 
@@ -135,7 +137,7 @@ function requestRestockSF(prodId) {
   const reqQty = prod.threshold * 2;
   const requests = DB.get("storefrontRequests") || [];
   const reqId = "SF-REQ-" + (100 + requests.length + 1);
-  requests.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: reqQty, dateCreated: new Date().toISOString(), status: "Pending" });
+  requests.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: reqQty, dateCreated: new Date().toISOString(), status: "Pending", requestedBy: currentUser.username });
   DB.set("storefrontRequests", requests);
   pushNotification("Storefront Stock Replenish Requested", `Bring out ${reqQty} units of ${prod.name} from Rack locations to storefront.`, "staff", { tab: "stock-out-sf" });
   renderStockOutSFView();
@@ -153,7 +155,7 @@ function adminSubmitSFRequest(event) {
   if (!prod) return;
   const requests = DB.get("storefrontRequests") || [];
   const reqId = "SF-REQ-" + (100 + requests.length + 1);
-  requests.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: qty, dateCreated: new Date().toISOString(), status: "Pending" });
+  requests.unshift({ id: reqId, productId: prodId, productName: prod.name, quantity: qty, dateCreated: new Date().toISOString(), status: "Pending", requestedBy: currentUser.username });
   DB.set("storefrontRequests", requests);
   pushNotification("Fulfillment Requested", `Move ${qty} units of ${prod.name} from racks to storefront.`, "staff", { tab: "stock-out-sf" });
   showToast(`Request ${reqId} created.`, "success");
@@ -184,6 +186,7 @@ function submitSFMovementFulfillment() {
 
   req.status = "Completed";
   req.rackSource = selectedRackEl.value;
+  req.fulfilledBy = currentUser.username;
   DB.set("storefrontRequests", requests);
   pushNotification("Storefront Stock Filled", `Delivered ${req.quantity} of ${req.productName} from ${req.rackSource} to storefront shelves.`, "admin", { tab: "stock-out-sf" });
   closeSFMovementFulfillmentModal();
@@ -215,7 +218,7 @@ function createClientOrder(event) {
 
   const clientOrders = DB.get("clientOrders") || [];
   const orderId = "CO-" + (5000 + clientOrders.length + 1);
-  clientOrders.unshift({ id: orderId, clientName, dateCreated: new Date().toISOString(), status: "Pending Staff Collection", items: orderItems });
+  clientOrders.unshift({ id: orderId, clientName, dateCreated: new Date().toISOString(), status: "Pending Staff Collection", items: orderItems, handledBy: { loggedBy: currentUser.username } });
   DB.set("clientOrders", clientOrders);
   pushNotification("New Big Client Order", `Retrieve and record ${orderItems.length} products for client ${clientName}.`, "staff", { tab: "stock-out-client", clientOrderId: orderId });
   showToast(`Client Order ${orderId} logged.`, "success");
@@ -244,9 +247,11 @@ function staffSubmitClientCollection(orderId) {
   }
 
   order.status = "Pending Store Front Check";
+  if (!order.handledBy) order.handledBy = {};
+  order.handledBy.collectedBy = currentUser.username;
   DB.set("clientOrders", orders);
-  pushNotification("Client Order Set Aside", `Items for ${order.clientName} (Order ${orderId}) are set in front. Store Staff please verify.`, "storefront", { tab: "stock-out-client", clientOrderId: orderId });
-  showToast("Products collected and set aside in front of Stock Room.", "success");
+  pushNotification("Client Order Set Aside", `Items for ${order.clientName} (Order ${orderId}) are set in front. Please verify.`, "storefront", { tab: "stock-out-client", clientOrderId: orderId });
+  showToast(`Products collected by ${currentUser.username} and set aside.`, "success");
   onClientOrderSelected();
 }
 
@@ -254,10 +259,17 @@ function storefrontVerifyClientOrder(orderId) {
   const orders = DB.get("clientOrders") || [];
   const order = orders.find(o => o.id === orderId);
   if (!order) return;
+  // Accountability guard: cannot verify if you were the one who collected
+  if ((order.handledBy || {}).collectedBy === currentUser.username) {
+    showToast("You collected this order — another staff member must verify it.", "warning");
+    return;
+  }
   order.status = "Ready for Delivery/Pick-up";
+  if (!order.handledBy) order.handledBy = {};
+  order.handledBy.verifiedBy = currentUser.username;
   DB.set("clientOrders", orders);
-  pushNotification("Client Order Verification Cleared", `Order ${orderId} for ${order.clientName} has been verified complete and is ready for dispatch.`, "admin", { tab: "stock-out-client", clientOrderId: orderId });
-  showToast("Store front verification completed. Ready for delivery.", "success");
+  pushNotification("Client Order Verification Cleared", `Order ${orderId} for ${order.clientName} verified by ${currentUser.username} and is ready for dispatch.`, "admin", { tab: "stock-out-client", clientOrderId: orderId });
+  showToast(`Order verified by ${currentUser.username}. Ready for delivery.`, "success");
   onClientOrderSelected();
 }
 
@@ -371,8 +383,9 @@ function fulfillAdjustment() {
 
   adj.status = "Completed";
   adj.rackFlipped = rackSelect.value;
+  adj.fulfilledBy = currentUser.username;
   DB.set("adjustments", adjs);
-  pushNotification("Adjustment Task Processed", `Completed ${adj.type === "In" ? "Store In" : "Stock Out"} of ${adj.quantity} ${adj.productName} via ${rackSelect.value}.`, "admin", { tab: "adjustment" });
+  pushNotification("Adjustment Task Processed", `Completed ${adj.type === "In" ? "Store In" : "Stock Out"} of ${adj.quantity} ${adj.productName} via ${rackSelect.value} by ${currentUser.username}.`, "admin", { tab: "adjustment" });
   closeAdjFulfillmentModal();
   renderAdjustmentView();
 }

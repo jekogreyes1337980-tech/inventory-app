@@ -217,6 +217,9 @@ function onSupplyOrderSelected() {
   const order = (DB.get("supplyOrders") || []).find(o => o.id === orderId);
   if (!order) return;
 
+  // Timeline first (top)
+  renderSupplyTimeline(order);
+
   document.getElementById("supply-order-items-tbody").innerHTML = order.items.map(item => {
     const recQty = item.receivedQty !== null ? item.receivedQty : "-";
     const rack = item.rackLocation || "-";
@@ -239,17 +242,16 @@ function onSupplyOrderSelected() {
       </tr>`;
   }).join("");
 
-  renderSupplyTimeline(order);
   renderSupplyRoleActions(order);
 }
 
 function renderSupplyTimeline(order) {
   const steps = [
-    { title: "Supply Order Drafted", desc: "Admin initialized the supply order." },
-    { title: "Forwarded to Staff", desc: "Order forwarded to Stock Staff to confirm delivery." },
-    { title: "Deliveries Received & Racked", desc: "Stock Staff inputted delivery quantities & rack positions." },
-    { title: "Discrepancies Checked", desc: "Admin verified matching counts vs ordered amounts." },
-    { title: "Stock Process Closed", desc: "Inventory updated. Discrepancies resolved or archived." }
+    { title: "Order Drafted", desc: "Admin initialized the supply order.", handledKey: null },
+    { title: "Forwarded to Staff", desc: "Order forwarded to confirm delivery.", handledKey: null },
+    { title: "Delivered & Racked", desc: "Staff inputted quantities & rack positions.", handledKey: "confirmedBy" },
+    { title: "Discrepancy Check", desc: "Admin verified counts vs ordered amounts.", handledKey: null },
+    { title: "Process Closed", desc: "Inventory updated. Discrepancies resolved.", handledKey: null }
   ];
 
   let activeStepIdx = 0;
@@ -259,21 +261,25 @@ function renderSupplyTimeline(order) {
   else if (order.status === "Reviewed Discrepancy") activeStepIdx = 3;
   else if (order.status.startsWith("Closed")) activeStepIdx = 4;
 
+  const h = order.handledBy || {};
   document.getElementById("supply-timeline-stepper").innerHTML = steps.map((step, idx) => {
     let stateClass = idx < activeStepIdx ? "completed" : idx === activeStepIdx ? "active" : "";
     let desc = step.desc;
     if (idx === activeStepIdx && order.status.includes("Discrepancy")) stateClass = "discrepancy";
-    if (idx === 4 && order.status === "Closed (Refunded)") { desc = "Order completed with discrepancies tagged as REFUNDED."; stateClass = "discrepancy"; }
-    else if (idx === 4 && order.status === "Closed") desc = "Order closed successfully. Stock levels updated.";
+    if (idx === 4 && order.status === "Closed (Refunded)") { desc = "Discrepancies tagged as REFUNDED."; stateClass = "discrepancy"; }
+    else if (idx === 4 && order.status === "Closed") desc = "Closed. Stock levels updated.";
+    const handler = step.handledKey && h[step.handledKey] ? `<div class="timeline-meta"><span style="color:var(--success)">&#10003; ${h[step.handledKey]}</span></div>` : "";
+    const isActive = idx === activeStepIdx;
     return `
       <div class="timeline-step ${stateClass}">
         <div class="timeline-bullet">${idx + 1}</div>
         <div class="timeline-content">
           <div class="timeline-title">
             <span>${step.title}</span>
-            ${idx === activeStepIdx ? `<span class="badge badge-indigo">Active</span>` : ""}
+            ${isActive ? `<span class="badge badge-indigo" style="font-size:0.65rem;">Active</span>` : ""}
           </div>
           <div class="timeline-desc">${desc}</div>
+          ${handler}
         </div>
       </div>`;
   }).join("");
@@ -330,9 +336,11 @@ function renderSupplyRoleActions(order) {
     } else {
       panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Awaiting confirmation inputs from Stock Room Staff...</span></div>`;
     }
-  } else if (currentRole === "staff") {
+  } else if (currentRole === "staff" || currentRole === "storefront") {
+    // Both staff roles can confirm deliveries — with accountability tracking
     if (order.status === "For Staff Confirmation" || order.status === "Reviewed Discrepancy (Correction)") {
       const racks = DB.get("racks") || [];
+      const roleLabel = currentRole === "staff" ? "Stock Room Staff" : "Store Front Staff";
       const inputRows = order.items.map(item => `
         <div class="input-grid-item">
           <span class="input-grid-name">${item.productName} <span style="font-size:0.75rem; color:var(--text-muted);">(Ordered: ${item.orderedQty})</span></span>
@@ -342,7 +350,7 @@ function renderSupplyRoleActions(order) {
           </select>
         </div>`).join("");
       panel.innerHTML = `
-        <h4>Record Delivered Stocks (Stock Room Staff)</h4>
+        <h4>Record Delivered Stocks (${roleLabel})</h4>
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Input actual counts received and choose storage racks:</p>
         <div style="margin-bottom:1.25rem;">${inputRows}</div>
         <button class="btn btn-success" onclick="staffSubmitDeliveries('${order.id}')">
@@ -350,13 +358,11 @@ function renderSupplyRoleActions(order) {
           Forward to Admin for Checking
         </button>`;
     } else if (order.status === "Staff Checked") {
-      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Deliveries recorded. Awaiting administrator discrepancies checks...</span></div>`;
+      const handler = (order.handledBy || {}).confirmedBy;
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Deliveries recorded${handler ? ` by <strong style="color:var(--success)">${handler}</strong>` : ""}. Awaiting administrator discrepancy check...</span></div>`;
     } else {
-      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>This order is not currently requiring Stock Staff action.</span></div>`;
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>This order does not currently require action.</span></div>`;
     }
-  } else {
-    const INFO_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>`;
-    panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${INFO_ICON}<span>Stock In workflow is managed exclusively by Admins and Stock Room Staff.</span></div>`;
   }
 }
 
@@ -402,12 +408,22 @@ function renderStockOutSFView() {
     const date = new Date(r.dateCreated).toLocaleDateString();
     const statusBadge = r.status === "Pending"
       ? '<span class="badge badge-warning">Pending Fulfillment</span>'
-      : '<span class="badge badge-success">Completed</span>';
-    let actionBtn = r.status === "Pending"
-      ? (currentRole === "staff"
-          ? `<button class="btn btn-primary btn-sm" onclick="openSFMovementFulfillmentModal('${r.id}')">Fulfill Movement</button>`
-          : `<span style="font-size:0.8rem; color:var(--text-muted);">Awaiting Stock Room Staff</span>`)
-      : "-";
+      : `<span class="badge badge-success">Completed${r.fulfilledBy ? ` · ${r.fulfilledBy}` : ""}</span>`;
+    // Both staff and storefront can fulfill — but the requester cannot self-fulfill
+    const canFulfill = r.status === "Pending" && (currentRole === "staff" || currentRole === "storefront");
+    const isSelfRequest = r.requestedBy && r.requestedBy === currentUser.username;
+    let actionBtn;
+    if (r.status === "Pending") {
+      if (canFulfill && !isSelfRequest) {
+        actionBtn = `<button class="btn btn-primary btn-sm" onclick="openSFMovementFulfillmentModal('${r.id}')">Fulfill Movement</button>`;
+      } else if (isSelfRequest) {
+        actionBtn = `<span style="font-size:0.8rem; color:var(--text-muted);">You created this request</span>`;
+      } else {
+        actionBtn = `<span style="font-size:0.8rem; color:var(--text-muted);">Awaiting Staff</span>`;
+      }
+    } else {
+      actionBtn = "-";
+    }
     return `
       <tr>
         <td><strong>${r.id}</strong></td>
@@ -496,6 +512,9 @@ function onClientOrderSelected() {
   const order = (DB.get("clientOrders") || []).find(o => o.id === orderId);
   if (!order) return;
 
+  // Timeline first (top)
+  renderClientTimeline(order);
+
   document.getElementById("client-order-items-tbody").innerHTML = order.items.map(item => `
     <tr>
       <td><strong>${item.productName}</strong></td>
@@ -504,16 +523,15 @@ function onClientOrderSelected() {
       <td><span class="badge badge-indigo">${item.rackSource || "-"}</span></td>
     </tr>`).join("");
 
-  renderClientTimeline(order);
   renderClientRoleActions(order);
 }
 
 function renderClientTimeline(order) {
   const steps = [
-    { title: "Order Logged", desc: "Order details recorded by Admin / Staff." },
-    { title: "Collected & Set Aside", desc: "Stock room staff retrieved products and set them in front of the stock room." },
-    { title: "Store Front Verified", desc: "Store front staff checked accuracy of order products." },
-    { title: "Completed & Dispatched", desc: "Client picked up the order. Hand-off complete." }
+    { title: "Order Logged", desc: "Order details recorded.", handledKey: "loggedBy" },
+    { title: "Collected & Set Aside", desc: "Products retrieved from racks.", handledKey: "collectedBy" },
+    { title: "Store Front Verified", desc: "Order accuracy confirmed.", handledKey: "verifiedBy" },
+    { title: "Dispatched", desc: "Client picked up. Hand-off complete.", handledKey: null }
   ];
 
   let activeStepIdx = 0;
@@ -522,17 +540,21 @@ function renderClientTimeline(order) {
   else if (order.status === "Ready for Delivery/Pick-up") activeStepIdx = 2;
   else if (order.status === "Closed") activeStepIdx = 3;
 
+  const h = order.handledBy || {};
   document.getElementById("client-timeline-stepper").innerHTML = steps.map((step, idx) => {
     const stateClass = idx < activeStepIdx ? "completed" : idx === activeStepIdx ? "active" : "";
+    const isActive = idx === activeStepIdx;
+    const handler = step.handledKey && h[step.handledKey] ? `<div class="timeline-meta"><span style="color:var(--success)">&#10003; ${h[step.handledKey]}</span></div>` : "";
     return `
       <div class="timeline-step ${stateClass}">
         <div class="timeline-bullet">${idx + 1}</div>
         <div class="timeline-content">
           <div class="timeline-title">
             <span>${step.title}</span>
-            ${idx === activeStepIdx ? `<span class="badge badge-indigo">Active</span>` : ""}
+            ${isActive ? `<span class="badge badge-indigo" style="font-size:0.65rem;">Active</span>` : ""}
           </div>
           <div class="timeline-desc">${step.desc}</div>
+          ${handler}
         </div>
       </div>`;
   }).join("");
@@ -541,9 +563,14 @@ function renderClientTimeline(order) {
 function renderClientRoleActions(order) {
   const panel = document.getElementById("client-order-actions-panel");
   const WAITING_ICON = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>`;
+  const h = order.handledBy || {};
 
   if (order.status === "Pending Staff Collection") {
-    if (currentRole === "staff") {
+    // Both staff and storefront can collect — but whoever logged the order cannot collect (accountability)
+    const isNonAdmin = currentRole === "staff" || currentRole === "storefront";
+    const isSameAsLogger = h.loggedBy && h.loggedBy === currentUser.username;
+    if (isNonAdmin && !isSameAsLogger) {
+      const roleLabel = currentRole === "staff" ? "Stock Room Staff" : "Store Front Staff";
       const products = DB.get("products") || [];
       const inputsHtml = order.items.map(item => {
         const prod = products.find(p => p.id === item.productId);
@@ -558,30 +585,40 @@ function renderClientRoleActions(order) {
           </div>`;
       }).join("");
       panel.innerHTML = `
-        <h4>Collect Products (Stock Room Staff)</h4>
+        <h4>Collect Products (${roleLabel})</h4>
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Collect counts from racks and set them in front of the stock room:</p>
         <div style="margin-bottom:1.25rem;">${inputsHtml}</div>
-        <button class="btn btn-primary" onclick="staffSubmitClientCollection('${order.id}')">Set Aside & Notify Store Front</button>`;
+        <button class="btn btn-primary" onclick="staffSubmitClientCollection('${order.id}')">Set Aside &amp; Notify Store Front</button>`;
+    } else if (isSameAsLogger) {
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--warning);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>You logged this order — another staff member must collect the items.</span></div>`;
     } else {
-      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Awaiting Stock Room Staff to collect and set items aside...</span></div>`;
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Awaiting Staff to collect and set items aside...</span></div>`;
     }
   } else if (order.status === "Pending Store Front Check") {
-    if (currentRole === "storefront") {
+    // Both staff and storefront can verify — but whoever collected cannot verify (accountability)
+    const isNonAdmin = currentRole === "staff" || currentRole === "storefront";
+    const isSameAsCollector = h.collectedBy && h.collectedBy === currentUser.username;
+    if (isNonAdmin && !isSameAsCollector) {
+      const roleLabel = currentRole === "storefront" ? "Store Front Staff" : "Stock Room Staff";
+      const collectorNote = h.collectedBy ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">Collected by: <strong style="color:var(--success)">${h.collectedBy}</strong></p>` : "";
       panel.innerHTML = `
-        <h4>Verify Client Order (Store Front Staff)</h4>
-        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Inspect order layout. Confirm items set aside are complete and correct.</p>
-        <button class="btn btn-success" onclick="storefrontVerifyClientOrder('${order.id}')">Verify Complete & Ready for Delivery</button>`;
+        <h4>Verify Client Order (${roleLabel})</h4>
+        ${collectorNote}
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Inspect items set aside. Confirm order is complete and correct.</p>
+        <button class="btn btn-success" onclick="storefrontVerifyClientOrder('${order.id}')">Verify Complete &amp; Ready for Delivery</button>`;
+    } else if (isSameAsCollector) {
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--warning);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg><span>You collected this order — another staff member must verify it.</span></div>`;
     } else {
-      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Awaiting Store Front Staff to inspect and verify set aside products...</span></div>`;
+      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Awaiting Staff to inspect and verify the set-aside products...</span></div>`;
     }
   } else if (order.status === "Ready for Delivery/Pick-up") {
-    if (currentRole === "admin" || currentRole === "staff") {
+    if (currentRole === "admin" || currentRole === "staff" || currentRole === "storefront") {
+      const verifierNote = h.verifiedBy ? `<p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1rem;">Verified by: <strong style="color:var(--success)">${h.verifiedBy}</strong></p>` : "";
       panel.innerHTML = `
-        <h4>Final Pick-up & Dispatch</h4>
+        <h4>Final Pick-up &amp; Dispatch</h4>
+        ${verifierNote}
         <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">Client has arrived to collect. Confirm delivery hand-off.</p>
         <button class="btn btn-success" onclick="completeClientDispatch('${order.id}')">Log Client Pick-up (Close Workflow)</button>`;
-    } else {
-      panel.innerHTML = `<div class="d-flex align-center gap-1" style="color:var(--text-muted);">${WAITING_ICON}<span>Ready for Pick-up. Client hand-off must be completed by Admin/Stock Staff.</span></div>`;
     }
   } else if (order.status === "Closed") {
     panel.innerHTML = `
@@ -666,11 +703,13 @@ function renderAdjustmentView() {
   tbody.innerHTML = adjustments.map(a => {
     const date = new Date(a.date).toLocaleDateString();
     const typeBadge = a.type === "In" ? '<span class="badge badge-success">Stock In</span>' : '<span class="badge badge-danger">Stock Out</span>';
-    const statusBadge = a.status === "Requested" ? '<span class="badge badge-warning">Awaiting Storage</span>' : '<span class="badge badge-success">Completed</span>';
+    const statusBadge = a.status === "Requested" ? '<span class="badge badge-warning">Awaiting Fulfillment</span>' : `<span class="badge badge-success">Done${a.fulfilledBy ? ` · ${a.fulfilledBy}` : ""}</span>`;
+    // Both staff and storefront can fulfill adjustments
+    const canFulfill = currentRole === "staff" || currentRole === "storefront";
     const actionCell = a.status === "Requested"
-      ? (currentRole === "staff"
+      ? (canFulfill
           ? `<button class="btn btn-primary btn-sm" onclick="openAdjustmentFulfillModal('${a.id}')">Process Action</button>`
-          : `<span style="font-size:0.8rem; color:var(--text-muted);">Awaiting Stock Room</span>`)
+          : `<span style="font-size:0.8rem; color:var(--text-muted);">Awaiting Staff</span>`)
       : "-";
     return `
       <tr>
