@@ -178,13 +178,6 @@ function renderStockInView() {
     orderSelect.value = previousVal;
   }
 
-  const supplierSelect = document.getElementById("supply-order-supplier");
-  supplierSelect.innerHTML = "";
-  suppliers.forEach(s => {
-    const opt = document.createElement("option");
-    opt.value = s; opt.text = s;
-    supplierSelect.appendChild(opt);
-  });
 
   const productsGrid = document.getElementById("supply-order-products-grid");
   productsGrid.innerHTML = products.map(p => {

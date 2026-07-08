@@ -268,10 +268,8 @@ export default function StockIn() {
           </h2>
           <form onSubmit={handleCreateOrder}>
             <div className="form-group">
-              <label>Select Supplier Partner</label>
-              <select name="supplier" required>
-                {suppliers.map((s) => <option key={s} value={s}>{s}</option>)}
-              </select>
+              <label>Supplier Details</label>
+              <input type="text" name="supplier" placeholder="Enter supplier name or details" required />
             </div>
             <div className="form-group">
               <label>Select Items & Quantities</label>
