@@ -14,8 +14,7 @@ const SUPPLY_STEPS = [
   { title: 'Order Drafted', desc: 'Admin initialized the supply order.', handledKey: null },
   { title: 'Forwarded to Staff', desc: 'Order forwarded to confirm delivery.', handledKey: null },
   { title: 'Delivered & Racked', desc: 'Staff inputted quantities & rack positions.', handledKey: 'confirmedBy' },
-  { title: 'Discrepancy Check', desc: 'Admin verified counts vs ordered amounts.', handledKey: null },
-  { title: 'Process Closed', desc: 'Inventory updated. Discrepancies resolved.', handledKey: null },
+  { title: 'Process Closed', desc: 'Inventory updated with received items.', handledKey: null },
 ];
 
 export default function StockIn() {
@@ -26,6 +25,9 @@ export default function StockIn() {
   const [supplyOrders, setSupplyOrders] = useState([]);
   const [racks, setRacks] = useState([]);
   const [selectedOrderId, setSelectedOrderId] = useState('');
+
+  // Draft item builder state
+  const [draftItems, setDraftItems] = useState([{ itemName: '', quantity: '', unitPrice: '' }]);
 
   const load = useCallback(async () => {
     setProducts(await api.get('products') || []);
@@ -46,23 +48,35 @@ export default function StockIn() {
 
   const activeStepIdx = (status) => {
     if (status === 'Draft') return 0;
-    if (status === 'Ordered' || status === 'For Staff Confirmation' || status.includes('Correction')) return 1;
+    if (status === 'Ordered' || status === 'For Staff Confirmation') return 1;
     if (status === 'Staff Checked') return 2;
-    if (status === 'Reviewed Discrepancy') return 3;
-    if (status.startsWith('Closed')) return 4;
+    if (status.startsWith('Closed')) return 3;
     return 0;
+  };
+
+  const addDraftRow = () => {
+    setDraftItems([...draftItems, { itemName: '', quantity: '', unitPrice: '' }]);
+  };
+
+  const removeDraftRow = (idx) => {
+    if (draftItems.length <= 1) return;
+    setDraftItems(draftItems.filter((_, i) => i !== idx));
+  };
+
+  const updateDraftRow = (idx, field, value) => {
+    const updated = [...draftItems];
+    updated[idx][field] = value;
+    setDraftItems(updated);
   };
 
   const handleCreateOrder = async (e) => {
     e.preventDefault();
-    const form = e.target;
-    
-    const supplierName = form.supplierName.value;
-    const supplierContact = form.supplierContact.value;
-    const supplierPhone = form.supplierPhone.value;
-    const supplierEmail = form.supplierEmail.value;
-    const supplierAddress = form.supplierAddress.value;
-    
+    const supplierName = e.target.supplierName.value;
+    const supplierContact = e.target.supplierContact.value;
+    const supplierPhone = e.target.supplierPhone.value;
+    const supplierEmail = e.target.supplierEmail.value;
+    const supplierAddress = e.target.supplierAddress.value;
+
     let supplier = supplierName;
     const parts = [];
     if (supplierContact) parts.push(`Contact: ${supplierContact}`);
@@ -70,25 +84,37 @@ export default function StockIn() {
     if (supplierEmail) parts.push(`Email: ${supplierEmail}`);
     if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
     if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
-    
-    const selectedItems = [];
-    products.forEach((p) => {
-      const chk = form[`chk-${p.id}`];
-      const qtyInput = form[`qty-${p.id}`];
-      if (chk?.checked && qtyInput) {
-        const qty = parseInt(qtyInput.value);
-        if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null });
-      }
-    });
-    if (selectedItems.length === 0) { Swal.fire({ icon: 'warning', title: 'Please select at least one product with a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
+
+    const validItems = draftItems.filter(
+      (item) => item.itemName.trim() && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
+    );
+
+    if (validItems.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Please add at least one item with a valid name, quantity, and unit price.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
 
     const orders = [...supplyOrders];
     const orderId = 'SO-' + (1000 + orders.length + 1);
-    orders.unshift({ id: orderId, supplier, dateCreated: new Date().toISOString(), status: 'Draft', items: selectedItems, handledBy: { draftedBy: user?.username } });
+    orders.unshift({
+      id: orderId,
+      supplier,
+      dateCreated: new Date().toISOString(),
+      status: 'Draft',
+      items: validItems.map((item) => ({
+        itemName: item.itemName.trim(),
+        orderedQty: parseInt(item.quantity),
+        unitPrice: parseFloat(item.unitPrice),
+        receivedQty: null,
+        rackLocation: null,
+      })),
+      handledBy: { draftedBy: user?.username },
+    });
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
     setSelectedOrderId(orderId);
-    Swal.fire({ icon: 'success', title: 'Supply Order ' + orderId + ' created as Draft!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    setDraftItems([{ itemName: '', quantity: '', unitPrice: '' }]);
+    Swal.fire({ icon: 'success', title: `Supply Order ${orderId} created as Draft!`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleForward = async (orderId) => {
@@ -98,7 +124,6 @@ export default function StockIn() {
     });
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
-    // push notification
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'New Supply Delivery Expected', message: 'Verify delivery contents for ' + orderId, timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
@@ -111,8 +136,8 @@ export default function StockIn() {
     if (!order) return;
 
     for (const item of order.items) {
-      const qtyInput = document.getElementById('rec-qty-' + item.productId);
-      const rackSelect = document.getElementById('rec-rack-' + item.productId);
+      const qtyInput = document.getElementById('rec-qty-' + item.itemName.replace(/\s+/g, '-'));
+      const rackSelect = document.getElementById('rec-rack-' + item.itemName.replace(/\s+/g, '-'));
       if (qtyInput && rackSelect) {
         const recQty = parseInt(qtyInput.value);
         if (isNaN(recQty) || recQty < 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid received quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
@@ -127,63 +152,53 @@ export default function StockIn() {
     setSupplyOrders(orders);
 
     const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Verification required on received items for ' + orderId + '. Confirmed by ' + user?.username + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
+    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Received items logged for ' + orderId + '. Confirmed by ' + user?.username + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
     await api.set('notifications', notifs);
     Swal.fire({ icon: 'success', title: 'Deliveries recorded by ' + user?.username + '. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const handleClose = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) {
-        o.status = 'Closed';
-        // Update product stock
-        o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod) {
-            prod.stockRoomQty += item.receivedQty;
-            if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation);
-          }
+    const orders = supplyOrders.map((o) => ({ ...o }));
+    const order = orders.find((o) => o.id === orderId);
+    if (!order) return;
+
+    order.status = 'Closed';
+
+    const updatedProducts = [...products];
+
+    for (const item of order.items) {
+      const received = item.receivedQty || item.orderedQty;
+      const existing = updatedProducts.find(
+        (p) => p.name.toLowerCase() === item.itemName.toLowerCase()
+      );
+      if (existing) {
+        existing.stockRoomQty += received;
+        if (item.rackLocation && !existing.racks.includes(item.rackLocation)) {
+          existing.racks.push(item.rackLocation);
+        }
+      } else {
+        updatedProducts.push({
+          id: 'prod-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+          name: item.itemName,
+          category: 'General',
+          unit: 'pcs',
+          stockRoomQty: received,
+          storefrontQty: 0,
+          threshold: 5,
+          racks: item.rackLocation ? [item.rackLocation] : [],
+          cost: item.unitPrice || 0,
+          price: 0,
+          rollLengthMeters: 0,
+          convertedStock: 0,
         });
       }
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    await api.set('products', products);
-    setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Supply Order closed. Inventory updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-  };
+    }
 
-  const handleReviewDiscrepancy = async (orderId) => {
-    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy'; return o; });
     await api.set('supplyOrders', orders);
+    await api.set('products', updatedProducts);
     setSupplyOrders(orders);
-  };
-
-  const handleSettleRefund = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) {
-        o.status = 'Closed (Refunded)';
-        o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod) { prod.stockRoomQty += item.receivedQty; if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation); }
-        });
-      }
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    await api.set('products', products);
-    setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-  };
-
-  const handleSettleCorrection = async (orderId) => {
-    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy (Correction)'; return o; });
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
-    const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
-    await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    setProducts(updatedProducts);
+    Swal.fire({ icon: 'success', title: 'Supply Order closed. New items added to inventory.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const renderActions = () => {
@@ -214,22 +229,7 @@ export default function StockIn() {
                 <h5 style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>Quantities Match Perfect</h5>
               </GlassCard>
             )}
-            <div className="d-flex gap-2">
-              <Button variant="success" onClick={() => handleClose(selected.id)}>Close Stock {discrepancies.length > 0 ? '(Accept Anyway)' : 'In'}</Button>
-              {discrepancies.length > 0 && <Button variant="danger" onClick={() => handleReviewDiscrepancy(selected.id)}>Resolve Discrepancy</Button>}
-            </div>
-          </div>
-        );
-      }
-      if (selected.status === 'Reviewed Discrepancy') {
-        return (
-          <div>
-            <h4>Discrepancy Review Panel</h4>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Select supplier settlement action:</p>
-            <div className="d-flex gap-2">
-              <Button variant="warning" onClick={() => handleSettleRefund(selected.id)}>Supplier Refunded Order</Button>
-              <Button variant="primary" onClick={() => handleSettleCorrection(selected.id)}>Supplier Corrects Next Shipment</Button>
-            </div>
+            <Button variant="success" onClick={() => handleClose(selected.id)}>Close & Update Inventory</Button>
           </div>
         );
       }
@@ -241,17 +241,17 @@ export default function StockIn() {
 
     if (role === 'staff' || role === 'storefront') {
       const roleLabel = role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff';
-      if (selected.status === 'For Staff Confirmation' || selected.status === 'Reviewed Discrepancy (Correction)') {
+      if (selected.status === 'For Staff Confirmation') {
         return (
           <div>
             <h4>Record Delivered Stocks ({roleLabel})</h4>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Input actual counts received and choose storage racks:</p>
             <div style={{ marginBottom: '1.25rem' }}>
               {selected.items.map((item) => (
-                <div key={item.productId} className="input-grid-item">
-                  <span className="input-grid-name">{item.productName} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Ordered: {item.orderedQty})</span></span>
-                  <input type="number" id={'rec-qty-' + item.productId} defaultValue={item.orderedQty} min="0" className="input-grid-qty" placeholder="Rec Qty" />
-                  <select id={'rec-rack-' + item.productId} className="input-grid-rack">
+                <div key={item.itemName} className="input-grid-item">
+                  <span className="input-grid-name">{item.itemName} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Ordered: {item.orderedQty})</span></span>
+                  <input type="number" id={'rec-qty-' + item.itemName.replace(/\s+/g, '-')} defaultValue={item.orderedQty} min="0" className="input-grid-qty" placeholder="Rec Qty" />
+                  <select id={'rec-rack-' + item.itemName.replace(/\s+/g, '-')} className="input-grid-rack">
                     {racks.map((r) => <option key={r} value={r}>{r}</option>)}
                   </select>
                 </div>
@@ -263,7 +263,7 @@ export default function StockIn() {
       }
       if (selected.status === 'Staff Checked') {
         const confirmedBy = (selected.handledBy || {}).confirmedBy;
-        return <div style={{ color: 'var(--text-muted)' }}>Deliveries recorded{confirmedBy && <> by <strong style={{ color: 'var(--success)' }}>{confirmedBy}</strong></>}. Awaiting administrator discrepancy check...</div>;
+        return <div style={{ color: 'var(--text-muted)' }}>Deliveries recorded{confirmedBy && <> by <strong style={{ color: 'var(--success)' }}>{confirmedBy}</strong></>}. Awaiting administrator closure...</div>;
       }
       return <div style={{ color: 'var(--text-muted)' }}>This order does not currently require action.</div>;
     }
@@ -293,24 +293,52 @@ export default function StockIn() {
               </div>
               <input type="text" name="supplierAddress" placeholder="Physical Address (Optional)" style={{ width: '100%' }} />
             </div>
+
             <div className="form-group">
-              <label>Select Items & Quantities</label>
-              <div style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem' }}>
-                {products.map((p) => {
-                  const unitText = p.unit === 'rolls/meters' ? 'meters' : 'pcs';
-                  return (
-                    <div key={p.id} className="input-grid-item">
-                      <input type="checkbox" id={'chk-' + p.id} name={'chk-' + p.id} value={p.id} onChange={(e) => {
-                        const q = document.getElementById('qty-' + p.id);
-                        if (q) { q.disabled = !e.target.checked; if (e.target.checked) { q.value = 10; q.focus(); } else q.value = ''; }
-                      }} />
-                      <label htmlFor={'chk-' + p.id} className="input-grid-name">{p.name} ({unitText})</label>
-                      <input type="number" id={'qty-' + p.id} name={'qty-' + p.id} placeholder="Qty" min="1" disabled className="input-grid-qty" />
+              <label>Order Items</label>
+              <div style={{ marginBottom: '0.75rem' }}>
+                {draftItems.map((item, idx) => (
+                  <div key={idx} className="input-grid-item" style={{ marginBottom: '0.5rem', padding: '0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--radius-md)' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', width: '100%' }}>
+                      <input
+                        type="text"
+                        placeholder="Item name"
+                        value={item.itemName}
+                        onChange={(e) => updateDraftRow(idx, 'itemName', e.target.value)}
+                        style={{ flex: 2, minWidth: '120px' }}
+                        required
+                      />
+                      <input
+                        type="number"
+                        placeholder="Qty"
+                        value={item.quantity}
+                        onChange={(e) => updateDraftRow(idx, 'quantity', e.target.value)}
+                        min="1"
+                        style={{ flex: 1, minWidth: '60px' }}
+                        required
+                      />
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="Unit Price"
+                        value={item.unitPrice}
+                        onChange={(e) => updateDraftRow(idx, 'unitPrice', e.target.value)}
+                        min="0"
+                        style={{ flex: 1, minWidth: '80px' }}
+                        required
+                      />
+                      {draftItems.length > 1 && (
+                        <button type="button" onClick={() => removeDraftRow(idx)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}>&times;</button>
+                      )}
                     </div>
-                  );
-                })}
+                  </div>
+                ))}
               </div>
+              <Button type="button" variant="secondary" size="sm" onClick={addDraftRow} style={{ marginBottom: '0.75rem' }}>
+                + Add Another Item
+              </Button>
             </div>
+
             <Button type="submit" className="w-full">Create Supply Order Draft</Button>
           </form>
         </GlassCard>
@@ -353,8 +381,7 @@ export default function StockIn() {
                 <Timeline
                   steps={SUPPLY_STEPS}
                   activeStep={activeStepIdx(selected.status)}
-                  discrepancy={selected.status.includes('Discrepancy')}
-                  activeLabel={selected.status === 'Closed (Refunded)' ? 'Discrepancies tagged as REFUNDED.' : selected.status === 'Closed' ? 'Closed. Stock levels updated.' : undefined}
+                  activeLabel={selected.status === 'Closed' ? 'Closed. Inventory updated.' : undefined}
                   handledBy={selected.handledBy || {}}
                 />
               </div>
@@ -362,12 +389,13 @@ export default function StockIn() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
                 <DataTable
-                  headers={['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
+                  headers={['Item', 'Unit Price', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
                   rows={selected.items.map((item) => {
                     const isDiscrepancy = selected.status !== 'Draft' && selected.status !== 'Ordered' && selected.status !== 'For Staff Confirmation' && item.receivedQty !== item.orderedQty;
                     return (
                       <>
-                        <td><strong>{item.productName}</strong></td>
+                        <td><strong>{item.itemName}</strong></td>
+                        <td>&#x20B1;{(item.unitPrice || 0).toFixed(2)}</td>
                         <td>{item.orderedQty}</td>
                         <td>{item.receivedQty !== null ? item.receivedQty : '-'}</td>
                         <td><Badge>{item.rackLocation || '-'}</Badge></td>

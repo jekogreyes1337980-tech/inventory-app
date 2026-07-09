@@ -25,27 +25,27 @@ export default function Inventory() {
         </div>
 
         <DataTable
-          headers={['Product Name & Type', 'Stock Room Quantity', 'Storefront Stock', 'Stock Room Rack(s)', 'Unit Cost', 'Selling Price']}
+          headers={['Product Name', 'Total Stock', 'Converted Stock', 'Available Stock', 'Stock Room Rack(s)']}
           rows={products.map((p) => {
+            const available = p.stockRoomQty - (p.convertedStock || 0);
             const isLow = p.storefrontQty < p.threshold;
-            const stockRoomUnit = p.unit === 'rolls/meters' ? 'meters' : 'pcs';
-            const storefrontUnit = p.unit === 'rolls/meters' ? 'pcs (pre-cut)' : 'pcs';
+            const unitLabel = p.unit === 'rolls/meters' ? 'meters' : 'pcs';
             return (
               <>
                 <td>
                   <div style={{ fontWeight: 600 }}>{p.name}</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{p.category}</div>
                 </td>
-                <td><strong>{p.stockRoomQty}</strong> <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{stockRoomUnit}</span></td>
+                <td><strong>{p.stockRoomQty}</strong> <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{unitLabel}</span></td>
+                <td><strong style={{ color: 'var(--warning)' }}>{p.convertedStock || 0}</strong> <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{unitLabel}</span></td>
                 <td>
-                  <strong>{p.storefrontQty}</strong> <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{storefrontUnit}</span>
+                  <strong style={{ color: available > 0 ? 'var(--success)' : 'var(--danger)' }}>{available}</strong>
+                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}> {unitLabel}</span>
                   <div style={{ marginTop: '0.25rem' }}>
-                    {isLow ? <Badge variant="danger">Low Stock</Badge> : <Badge variant="success">OK</Badge>}
+                    {p.storefrontQty < p.threshold ? <Badge variant="danger">Low Stock</Badge> : <Badge variant="success">OK</Badge>}
                   </div>
                 </td>
                 <td>{p.racks.map((r) => <Badge key={r}>{r}</Badge>)}</td>
-                <td>&#x20B1;{p.cost.toFixed(2)}</td>
-                <td>&#x20B1;{p.price.toFixed(2)}</td>
               </>
             );
           })}
