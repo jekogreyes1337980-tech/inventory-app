@@ -48,17 +48,17 @@ export const api = {
     });
   },
 
-  async acquireLock(username) {
+  async acquireLock(username, socketId) {
     return request('/api/lock', {
       method: 'POST',
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, socketId }),
     });
   },
 
-  async renewLock(username) {
+  async renewLock(username, socketId) {
     return request('/api/lock/renew', {
       method: 'POST',
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ username, socketId }),
     });
   },
 

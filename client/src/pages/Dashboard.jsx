@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../api/db';
+import { socket } from '../api/socket';
 import GlassCard from '../components/shared/GlassCard';
 import MetricCard from '../components/shared/MetricCard';
 import DataTable from '../components/shared/DataTable';
@@ -34,9 +35,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadData();
-    // Refresh dashboard data every 15 seconds
-    const intervalId = setInterval(loadData, 15000);
-    return () => clearInterval(intervalId);
+    
+    const handleDataUpdate = (key) => {
+      // Reload relevant data pieces instead of everything, but reloading all is safe and simple
+      loadData();
+    };
+
+    socket.on('data_updated', handleDataUpdate);
+    socket.on('data_reset', loadData);
+    
+    return () => {
+      socket.off('data_updated', handleDataUpdate);
+      socket.off('data_reset', loadData);
+    };
   }, [loadData]);
 
   const lowStocks = products.filter((p) => p.storefrontQty < p.threshold);

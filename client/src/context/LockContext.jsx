@@ -14,6 +14,7 @@
 
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { api } from '../api/db';
+import { socket } from '../api/socket';
 import { useAuth } from './AuthContext';
 import Swal from 'sweetalert2';
 
@@ -24,24 +25,25 @@ export function LockProvider({ children }) {
   const [lockInfo, setLockInfo] = useState(null); // { locked, lockedBy, since }
   const heartbeatRef = useRef(null);
 
-  // Poll lock status every 5s to keep UI informed
+  // Use WebSocket for real-time lock updates instead of polling
   useEffect(() => {
-    const poll = async () => {
-      try {
-        const status = await api.lockStatus();
-        setLockInfo(status);
-      } catch { /* ignore network hiccups */ }
+    // Initial fetch
+    api.lockStatus().then(setLockInfo).catch(() => {});
+
+    // Listen for live updates
+    const handleLockUpdated = (data) => {
+      setLockInfo(data);
     };
-    poll();
-    const id = setInterval(poll, 5000);
-    return () => clearInterval(id);
+
+    socket.on('lock_updated', handleLockUpdated);
+    return () => socket.off('lock_updated', handleLockUpdated);
   }, []);
 
   // Heartbeat — renews our lock every 10s while we hold it
   const startHeartbeat = useCallback(() => {
     if (heartbeatRef.current) return;
     heartbeatRef.current = setInterval(async () => {
-      if (user?.username) await api.renewLock(user.username);
+      if (user?.username) await api.renewLock(user.username, socket.id);
     }, 10000);
   }, [user]);
 
@@ -61,7 +63,7 @@ export function LockProvider({ children }) {
     if (user.role !== 'staff') return true;
 
     try {
-      const result = await api.acquireLock(user.username);
+      const result = await api.acquireLock(user.username, socket.id);
       if (result.success) {
         startHeartbeat();
         setLockInfo({ locked: true, lockedBy: user.username });

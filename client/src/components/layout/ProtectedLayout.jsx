@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Outlet, Navigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { api } from '../../api/db';
+import { socket } from '../../api/socket';
 import { ToastProvider } from '../shared/Toast';
 import Sidebar from './Sidebar';
 import Header from './Header';
@@ -33,12 +34,23 @@ export default function ProtectedLayout() {
   }, [user, logout]);
 
   useEffect(() => {
-    if (user) {
+    if (!user) return;
+    loadNotifications();
+
+    const handleDataUpdate = (key) => {
+      if (key === 'notifications') loadNotifications();
+    };
+    
+    const handleReset = () => {
       loadNotifications();
-      // Poll for new notifications every 10 seconds
-      const intervalId = setInterval(loadNotifications, 10000);
-      return () => clearInterval(intervalId);
-    }
+    };
+
+    socket.on('data_updated', handleDataUpdate);
+    socket.on('data_reset', handleReset);
+    return () => {
+      socket.off('data_updated', handleDataUpdate);
+      socket.off('data_reset', handleReset);
+    };
   }, [user, loadNotifications]);
 
   if (loading || verifying) return null;

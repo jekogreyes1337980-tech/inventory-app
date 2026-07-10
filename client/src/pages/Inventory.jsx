@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/db';
+import { socket } from '../api/socket';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Badge from '../components/shared/Badge';
@@ -13,9 +14,18 @@ export default function Inventory() {
 
   useEffect(() => {
     loadProducts();
-    // Refresh inventory every 15 seconds
-    const intervalId = setInterval(loadProducts, 15000);
-    return () => clearInterval(intervalId);
+    
+    const handleUpdate = (key) => {
+      if (key === 'products') loadProducts();
+    };
+
+    socket.on('data_updated', handleUpdate);
+    socket.on('data_reset', loadProducts);
+
+    return () => {
+      socket.off('data_updated', handleUpdate);
+      socket.off('data_reset', loadProducts);
+    };
   }, [loadProducts]);
 
   return (
