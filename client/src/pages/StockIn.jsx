@@ -84,14 +84,17 @@ export default function StockIn() {
     if (supplierEmail) parts.push(`Email: ${supplierEmail}`);
     if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
     if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
-    const validItems = draftItems.filter(
-      (item) => item.itemName.trim() && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
-    );
 
-    if (validItems.length === 0) {
-      Swal.fire({ icon: 'warning', title: 'Please add at least one item with a valid name, quantity, and unit price.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
-      return;
-    }
+    const selectedItems = [];
+    products.forEach((p) => {
+      const chk = form[`chk-${p.id}`];
+      const qtyInput = form[`qty-${p.id}`];
+      if (chk?.checked && qtyInput) {
+        const qty = parseInt(qtyInput.value);
+        if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null });
+      }
+    });
+    if (selectedItems.length === 0) { Swal.fire({ icon: 'warning', title: 'Please select at least one product with a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
 
     const orders = [...supplyOrders];
     const orderId = 'SO-' + (1000 + orders.length + 1);
@@ -157,88 +160,57 @@ export default function StockIn() {
   };
 
   const handleClose = async (orderId) => {
-    const orders = supplyOrders.map((o) => ({ ...o }));
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
-
-    order.status = 'Closed';
-
-    const updatedProducts = [...products];
-
-    for (const item of order.items) {
-      const received = item.receivedQty || item.orderedQty;
-      const existing = updatedProducts.find(
-        (p) => p.name.toLowerCase() === item.itemName.toLowerCase()
-      );
-      if (existing) {
-        existing.stockRoomQty += received;
-        if (item.rackLocation && !existing.racks.includes(item.rackLocation)) {
-          existing.racks.push(item.rackLocation);
-        }
-      } else {
-        updatedProducts.push({
-          id: 'prod-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
-          name: item.itemName,
-          category: 'General',
-          unit: 'pcs',
-          stockRoomQty: received,
-          storefrontQty: 0,
-          threshold: 5,
-          racks: item.rackLocation ? [item.rackLocation] : [],
-          cost: item.unitPrice || 0,
-          price: 0,
-          rollLengthMeters: 0,
-          convertedStock: 0,
-        });
-      }
-    }
-
-    await api.set('supplyOrders', orders);
-    await api.set('products', updatedProducts);
-    setSupplyOrders(orders);
-    setProducts(updatedProducts);
-    Swal.fire({ icon: 'success', title: 'Supply Order closed. New items added to inventory.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-  };
-
-  const handleSettleRefund = async (orderId) => {
     const orders = supplyOrders.map((o) => {
       if (o.id === orderId) {
-        o.status = 'Closed (Refunded)';
-        // No items are added to inventory for full refund
-      }
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-  };
-
-  const handleSettleCorrection = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) {
+        o.status = 'Closed';
+        // Update product stock
         o.items.forEach((item) => {
-          if (item.receivedQty && item.receivedQty > 0) {
-            const prod = products.find((p) => p.name.toLowerCase() === item.itemName.toLowerCase());
-            if (prod) {
-              prod.stockRoomQty += item.receivedQty;
-              if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation);
-            }
+          const prod = products.find((p) => p.id === item.productId);
+          if (prod) {
+            prod.stockRoomQty += item.receivedQty;
+            if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation);
           }
-          item.orderedQty = Math.max(0, item.orderedQty - (item.receivedQty || 0));
-          item.receivedQty = null;
         });
-        o.items = o.items.filter(item => item.orderedQty > 0);
-        o.status = 'Reviewed Discrepancy (Correction)';
       }
       return o;
     });
     await api.set('supplyOrders', orders);
     await api.set('products', products);
     setSupplyOrders(orders);
+    Swal.fire({ icon: 'success', title: 'Supply Order closed. Inventory updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+  };
+
+  const handleReviewDiscrepancy = async (orderId) => {
+    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy'; return o; });
+    await api.set('supplyOrders', orders);
+    setSupplyOrders(orders);
+  };
+
+  const handleSettleRefund = async (orderId) => {
+    const orders = supplyOrders.map((o) => {
+      if (o.id === orderId) {
+        o.status = 'Closed (Refunded)';
+        o.items.forEach((item) => {
+          const prod = products.find((p) => p.id === item.productId);
+          if (prod) { prod.stockRoomQty += item.receivedQty; if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation); }
+        });
+      }
+      return o;
+    });
+    await api.set('supplyOrders', orders);
+    await api.set('products', products);
+    setSupplyOrders(orders);
+    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+  };
+
+  const handleSettleCorrection = async (orderId) => {
+    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy (Correction)'; return o; });
+    await api.set('supplyOrders', orders);
+    setSupplyOrders(orders);
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Partial received. Remaining items await next shipment.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const renderActions = () => {
@@ -283,7 +255,7 @@ export default function StockIn() {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Select supplier settlement action:</p>
             <div className="d-flex gap-2">
               <Button variant="warning" onClick={() => handleSettleRefund(selected.id)}>Supplier Refunded Order</Button>
-              <Button variant="primary" onClick={() => handleSettleCorrection(selected.id)}>Partial Receive & Await Correction</Button>
+              <Button variant="primary" onClick={() => handleSettleCorrection(selected.id)}>Supplier Corrects Next Shipment</Button>
             </div>
           </div>
         );
@@ -394,80 +366,81 @@ export default function StockIn() {
               </Button>
             </div>
 
-            <Button type="submit" className="w-full">Create Supply Order Draft</Button>
-          </form>
-        </GlassCard>
+          <Button type="submit" className="w-full">Create Supply Order Draft</Button>
+        </form>
+      </GlassCard>
 
-        {role !== 'admin' && (
-          <GlassCard>
-            <h2 className="card-title">Stock In Workflow</h2>
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Supply Order forms are drafted and verified by the Administrator role. As {ROLE_LABELS[role]}, your task is to verify delivered items and store them on designated racks once the order is forwarded to you.
-            </p>
-            <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
-              <Badge variant="indigo">Role Restricted View</Badge>
-            </div>
-          </GlassCard>
-        )}
-
+      {role !== 'admin' && (
         <GlassCard>
-          <h2 className="card-title">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <polyline points="12 6 12 12 16 14"></polyline>
-            </svg>
-            Verify & Track Deliveries
-          </h2>
-
-          <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-            <label>Choose Supply Order:</label>
-            <select value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)}>
-              <option value="">-- Choose a Supply Order --</option>
-              {supplyOrders.map((so) => (
-                <option key={so.id} value={so.id}>{so.id} [{so.supplier}] - Status: {so.status}</option>
-              ))}
-            </select>
+          <h2 className="card-title">Stock In Workflow</h2>
+          <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Supply Order forms are drafted and verified by the Administrator role. As {ROLE_LABELS[role]}, your task is to verify delivered items and store them on designated racks once the order is forwarded to you.
+          </p>
+          <div style={{ marginTop: '1.5rem', textAlign: 'center' }}>
+            <Badge variant="indigo">Role Restricted View</Badge>
           </div>
-
-          {selected && (
-            <div>
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.5rem' }}>Flow Timeline</h4>
-                <Timeline
-                  steps={SUPPLY_STEPS}
-                  activeStep={activeStepIdx(selected.status)}
-                  activeLabel={selected.status === 'Closed' ? 'Closed. Inventory updated.' : undefined}
-                  handledBy={selected.handledBy || {}}
-                />
-              </div>
-
-              <div style={{ marginBottom: '1.5rem' }}>
-                <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
-                <DataTable
-                  headers={role === 'admin' ? ['Item', 'Ordered', 'Unit Price', 'Received', 'Rack Location', 'Match Status'] : ['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
-                  rows={selected.items.map((item) => {
-                    const isDiscrepancy = selected.status !== 'Draft' && selected.status !== 'Ordered' && selected.status !== 'For Staff Confirmation' && item.receivedQty !== item.orderedQty;
-                    return (
-                      <>
-                        <td><strong>{item.itemName}</strong></td>
-                        <td>{item.orderedQty}</td>
-                        {role === 'admin' && <td>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : '-'}</td>}
-                        <td>{item.receivedQty !== null ? item.receivedQty : '-'}</td>
-                        <td><Badge>{item.rackLocation || '-'}</Badge></td>
-                        <td>{isDiscrepancy ? <span className="discrepancy-badge">Discrepancy</span> : (item.receivedQty !== null ? <Badge variant="success">Match</Badge> : <Badge variant="muted">Pending</Badge>)}</td>
-                      </>
-                    );
-                  })}
-                />
-              </div>
-
-              <GlassCard style={{ margin: 0, background: 'rgba(255,255,255,0.02)' }}>
-                {renderActions()}
-              </GlassCard>
-            </div>
-          )}
         </GlassCard>
-      </div>
-    </section>
+      )}
+
+      <GlassCard>
+        <h2 className="card-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="12 6 12 12 16 14"></polyline>
+          </svg>
+          Verify & Track Deliveries
+        </h2>
+
+        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+          <label>Choose Supply Order:</label>
+          <select value={selectedOrderId} onChange={(e) => setSelectedOrderId(e.target.value)}>
+            <option value="">-- Choose a Supply Order --</option>
+            {supplyOrders.map((so) => (
+              <option key={so.id} value={so.id}>{so.id} [{so.supplier}] - Status: {so.status}</option>
+            ))}
+          </select>
+        </div>
+
+        {selected && (
+          <div>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ marginBottom: '0.5rem' }}>Flow Timeline</h4>
+              <Timeline
+                steps={SUPPLY_STEPS}
+                activeStep={activeStepIdx(selected.status)}
+                activeLabel={selected.status === 'Closed' ? 'Closed. Inventory updated.' : undefined}
+                handledBy={selected.handledBy || {}}
+              />
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
+              <DataTable
+                headers={['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
+                rows={selected.items.map((item) => {
+                  const isDiscrepancy = selected.status !== 'Draft' && selected.status !== 'Ordered' && selected.status !== 'For Staff Confirmation' && item.receivedQty !== item.orderedQty;
+                  return (
+                    <>
+                      <td><strong>{item.itemName}</strong></td>
+                      <td>&#x20B1;{(item.unitPrice || 0).toFixed(2)}</td>
+                      <td>{item.orderedQty}</td>
+                      {role === 'admin' && <td>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : '-'}</td>}
+                      <td>{item.receivedQty !== null ? item.receivedQty : '-'}</td>
+                      <td><Badge>{item.rackLocation || '-'}</Badge></td>
+                      <td>{isDiscrepancy ? <span className="discrepancy-badge">Discrepancy</span> : (item.receivedQty !== null ? <Badge variant="success">Match</Badge> : <Badge variant="muted">Pending</Badge>)}</td>
+                    </>
+                  );
+                })}
+              />
+            </div>
+
+            <GlassCard style={{ margin: 0, background: 'rgba(255,255,255,0.02)' }}>
+              {renderActions()}
+            </GlassCard>
+          </div>
+        )}
+      </GlassCard>
+    </div>
+    </section >
   );
 }
