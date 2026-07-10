@@ -75,9 +75,11 @@ export default function StockIn() {
     products.forEach((p) => {
       const chk = form[`chk-${p.id}`];
       const qtyInput = form[`qty-${p.id}`];
+      const priceInput = form[`price-${p.id}`];
       if (chk?.checked && qtyInput) {
         const qty = parseInt(qtyInput.value);
-        if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null });
+        const price = priceInput ? parseFloat(priceInput.value) : 0;
+        if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null, unitPrice: isNaN(price) ? 0 : price });
       }
     });
     if (selectedItems.length === 0) { Swal.fire({ icon: 'warning', title: 'Please select at least one product with a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
@@ -163,27 +165,41 @@ export default function StockIn() {
     const orders = supplyOrders.map((o) => {
       if (o.id === orderId) {
         o.status = 'Closed (Refunded)';
+        // No items are added to inventory for full refund
+      }
+      return o;
+    });
+    await api.set('supplyOrders', orders);
+    setSupplyOrders(orders);
+    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+  };
+
+  const handleSettleCorrection = async (orderId) => {
+    const orders = supplyOrders.map((o) => {
+      if (o.id === orderId) {
         o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod) { prod.stockRoomQty += item.receivedQty; if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation); }
+          if (item.receivedQty && item.receivedQty > 0) {
+            const prod = products.find((p) => p.id === item.productId);
+            if (prod) {
+              prod.stockRoomQty += item.receivedQty;
+              if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation);
+            }
+          }
+          item.orderedQty = Math.max(0, item.orderedQty - (item.receivedQty || 0));
+          item.receivedQty = null;
         });
+        o.items = o.items.filter(item => item.orderedQty > 0);
+        o.status = 'Reviewed Discrepancy (Correction)';
       }
       return o;
     });
     await api.set('supplyOrders', orders);
     await api.set('products', products);
     setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-  };
-
-  const handleSettleCorrection = async (orderId) => {
-    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy (Correction)'; return o; });
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
     const notifs = await api.get('notifications') || [];
     notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
     await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    Swal.fire({ icon: 'success', title: 'Partial received. Remaining items await next shipment.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
   const renderActions = () => {
@@ -228,7 +244,7 @@ export default function StockIn() {
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>Select supplier settlement action:</p>
             <div className="d-flex gap-2">
               <Button variant="warning" onClick={() => handleSettleRefund(selected.id)}>Supplier Refunded Order</Button>
-              <Button variant="primary" onClick={() => handleSettleCorrection(selected.id)}>Supplier Corrects Next Shipment</Button>
+              <Button variant="primary" onClick={() => handleSettleCorrection(selected.id)}>Partial Receive & Await Correction</Button>
             </div>
           </div>
         );
@@ -294,18 +310,24 @@ export default function StockIn() {
               <input type="text" name="supplierAddress" placeholder="Physical Address (Optional)" style={{ width: '100%' }} />
             </div>
             <div className="form-group">
-              <label>Select Items & Quantities</label>
+              <label>Select Items, Quantities & Prices</label>
               <div style={{ maxHeight: '250px', overflowY: 'auto', paddingRight: '0.5rem' }}>
                 {products.map((p) => {
                   const unitText = p.unit === 'rolls/meters' ? 'meters' : 'pcs';
                   return (
-                    <div key={p.id} className="input-grid-item">
+                    <div key={p.id} className="input-grid-item" style={{ gridTemplateColumns: 'auto 1fr 80px 100px' }}>
                       <input type="checkbox" id={'chk-' + p.id} name={'chk-' + p.id} value={p.id} onChange={(e) => {
                         const q = document.getElementById('qty-' + p.id);
-                        if (q) { q.disabled = !e.target.checked; if (e.target.checked) { q.value = 10; q.focus(); } else q.value = ''; }
+                        const price = document.getElementById('price-' + p.id);
+                        if (q && price) { 
+                          q.disabled = !e.target.checked; 
+                          price.disabled = !e.target.checked; 
+                          if (e.target.checked) { q.value = 10; q.focus(); } else { q.value = ''; price.value = ''; } 
+                        }
                       }} />
-                      <label htmlFor={'chk-' + p.id} className="input-grid-name">{p.name} ({unitText})</label>
+                      <label htmlFor={'chk-' + p.id} className="input-grid-name" style={{ fontSize: '0.85rem' }}>{p.name} ({unitText})</label>
                       <input type="number" id={'qty-' + p.id} name={'qty-' + p.id} placeholder="Qty" min="1" disabled className="input-grid-qty" />
+                      <input type="number" id={'price-' + p.id} name={'price-' + p.id} placeholder="Price ($)" min="0" step="0.01" disabled className="input-grid-qty" />
                     </div>
                   );
                 })}
@@ -362,13 +384,14 @@ export default function StockIn() {
               <div style={{ marginBottom: '1.5rem' }}>
                 <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
                 <DataTable
-                  headers={['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
+                  headers={role === 'admin' ? ['Item', 'Ordered', 'Unit Price', 'Received', 'Rack Location', 'Match Status'] : ['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
                   rows={selected.items.map((item) => {
                     const isDiscrepancy = selected.status !== 'Draft' && selected.status !== 'Ordered' && selected.status !== 'For Staff Confirmation' && item.receivedQty !== item.orderedQty;
                     return (
                       <>
                         <td><strong>{item.productName}</strong></td>
                         <td>{item.orderedQty}</td>
+                        {role === 'admin' && <td>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : '-'}</td>}
                         <td>{item.receivedQty !== null ? item.receivedQty : '-'}</td>
                         <td><Badge>{item.rackLocation || '-'}</Badge></td>
                         <td>{isDiscrepancy ? <span className="discrepancy-badge">Discrepancy</span> : (item.receivedQty !== null ? <Badge variant="success">Match</Badge> : <Badge variant="muted">Pending</Badge>)}</td>
