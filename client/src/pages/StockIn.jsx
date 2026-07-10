@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../api/db';
+import { useLock } from '../context/LockContext';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -19,6 +20,7 @@ const SUPPLY_STEPS = [
 
 export default function StockIn() {
   const { role, user } = useOutletContext();
+  const { acquireLock, releaseLock } = useLock();
 
   const [products, setProducts] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -119,64 +121,98 @@ export default function StockIn() {
   };
 
   const handleForward = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) o.status = 'For Staff Confirmation';
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
-    const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'New Supply Delivery Expected', message: 'Verify delivery contents for ' + orderId, timestamp: new Date().toISOString(), role: 'staff', read: false });
-    await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Order forwarded to Staff.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    if (!await acquireLock()) return;
+    try {
+      const orders = supplyOrders.map((o) => {
+        if (o.id === orderId) {
+          o.status = 'For Staff Confirmation';
+          o.handledBy = { ...o.handledBy, forwardedBy: user?.username, forwardedAt: new Date().toISOString() };
+        }
+        return o;
+      });
+      await api.set('supplyOrders', orders);
+      setSupplyOrders(orders);
+      const notifs = await api.get('notifications') || [];
+      notifs.unshift({ id: 'notif-' + Date.now(), title: 'New Supply Delivery Expected', message: 'Verify delivery contents for ' + orderId, timestamp: new Date().toISOString(), role: 'staff', read: false });
+      await api.set('notifications', notifs);
+      Swal.fire({ icon: 'success', title: 'Order forwarded to Staff.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    } finally {
+      await releaseLock();
+    }
   };
 
   const handleStaffSubmit = async (orderId) => {
-    const orders = supplyOrders.map((o) => o.id === orderId ? { ...o } : o);
-    const order = orders.find((o) => o.id === orderId);
-    if (!order) return;
+    if (!await acquireLock()) return;
+    try {
+      const orders = supplyOrders.map((o) => o.id === orderId ? { ...o } : o);
+      const order = orders.find((o) => o.id === orderId);
+      if (!order) return;
 
-    for (const item of order.items) {
-      const qtyInput = document.getElementById('rec-qty-' + item.itemName.replace(/\s+/g, '-'));
-      const rackSelect = document.getElementById('rec-rack-' + item.itemName.replace(/\s+/g, '-'));
-      if (qtyInput && rackSelect) {
-        const recQty = parseInt(qtyInput.value);
-        if (isNaN(recQty) || recQty < 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid received quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
-        item.receivedQty = recQty;
-        item.rackLocation = rackSelect.value;
+      for (const item of order.items) {
+        const qtyInput = document.getElementById('rec-qty-' + item.itemName.replace(/\s+/g, '-'));
+        const rackInput = document.getElementById('rec-rack-' + item.itemName.replace(/\s+/g, '-'));
+        if (qtyInput && rackInput) {
+          const recQty = parseInt(qtyInput.value);
+          if (isNaN(recQty) || recQty < 0) { Swal.fire({ icon: 'warning', title: 'Please enter a valid received quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
+          item.receivedQty = recQty;
+          item.rackLocation = rackInput.value.trim();
+        }
       }
-    }
-    order.status = 'Staff Checked';
-    if (!order.handledBy) order.handledBy = {};
-    order.handledBy.confirmedBy = user?.username;
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
+      order.status = 'Staff Checked';
+      if (!order.handledBy) order.handledBy = {};
+      order.handledBy.confirmedBy = user?.username;
+      order.handledBy.confirmedAt = new Date().toISOString();
+      await api.set('supplyOrders', orders);
+      setSupplyOrders(orders);
 
-    const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Received items logged for ' + orderId + '. Confirmed by ' + user?.username + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
-    await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Deliveries recorded by ' + user?.username + '. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+      const notifs = await api.get('notifications') || [];
+      notifs.unshift({ id: 'notif-' + Date.now(), title: 'Delivery Logs Ready for Check', message: 'Received items logged for ' + orderId + '. Confirmed by ' + user?.username + '.', timestamp: new Date().toISOString(), role: 'admin', read: false });
+      await api.set('notifications', notifs);
+      Swal.fire({ icon: 'success', title: 'Deliveries recorded by ' + user?.username + '. Forwarded to Admin.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    } finally {
+      await releaseLock();
+    }
   };
 
   const handleClose = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) {
-        o.status = 'Closed';
-        // Update product stock
-        o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod) {
-            prod.stockRoomQty += item.receivedQty;
-            if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation);
-          }
-        });
-      }
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    await api.set('products', products);
-    setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Supply Order closed. Inventory updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    if (!await acquireLock()) return;
+    try {
+      const orders = supplyOrders.map((o) => {
+        if (o.id === orderId) {
+          o.status = 'Closed';
+          o.handledBy = { ...o.handledBy, closedBy: user?.username, closedAt: new Date().toISOString() };
+          o.items.forEach((item) => {
+            const prod = products.find((p) => p.name.toLowerCase() === item.itemName.toLowerCase());
+            if (prod) {
+              prod.stockRoomQty = (prod.stockRoomQty || 0) + (item.receivedQty || 0);
+              if (item.rackLocation && !prod.racks?.includes(item.rackLocation)) {
+                prod.racks = [...(prod.racks || []), item.rackLocation];
+              }
+            } else {
+              // New item not in inventory — create it
+              products.push({
+                id: 'prod-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
+                name: item.itemName,
+                category: 'General',
+                unit: item.isConvertible ? 'rolls/meters' : 'pcs',
+                stockRoomQty: item.receivedQty || 0,
+                storefrontQty: 0,
+                racks: item.rackLocation ? [item.rackLocation] : [],
+                isConvertible: item.isConvertible || false,
+              });
+            }
+          });
+        }
+        return o;
+      });
+      await api.set('supplyOrders', orders);
+      await api.set('products', products);
+      setSupplyOrders(orders);
+      setProducts([...products]);
+      Swal.fire({ icon: 'success', title: 'Supply Order closed. Inventory updated.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    } finally {
+      await releaseLock();
+    }
   };
 
   const handleReviewDiscrepancy = async (orderId) => {
@@ -186,30 +222,43 @@ export default function StockIn() {
   };
 
   const handleSettleRefund = async (orderId) => {
-    const orders = supplyOrders.map((o) => {
-      if (o.id === orderId) {
-        o.status = 'Closed (Refunded)';
-        o.items.forEach((item) => {
-          const prod = products.find((p) => p.id === item.productId);
-          if (prod) { prod.stockRoomQty += item.receivedQty; if (item.rackLocation && !prod.racks.includes(item.rackLocation)) prod.racks.push(item.rackLocation); }
-        });
-      }
-      return o;
-    });
-    await api.set('supplyOrders', orders);
-    await api.set('products', products);
-    setSupplyOrders(orders);
-    Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    if (!await acquireLock()) return;
+    try {
+      const orders = supplyOrders.map((o) => {
+        if (o.id === orderId) {
+          o.status = 'Closed (Refunded)';
+          o.handledBy = { ...o.handledBy, refundedBy: user?.username, refundedAt: new Date().toISOString() };
+          // No inventory update — full refund means no items received
+        }
+        return o;
+      });
+      await api.set('supplyOrders', orders);
+      setSupplyOrders(orders);
+      Swal.fire({ icon: 'success', title: 'Order finalized. Discrepancy tagged as REFUNDED.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    } finally {
+      await releaseLock();
+    }
   };
 
   const handleSettleCorrection = async (orderId) => {
-    const orders = supplyOrders.map((o) => { if (o.id === orderId) o.status = 'Reviewed Discrepancy (Correction)'; return o; });
-    await api.set('supplyOrders', orders);
-    setSupplyOrders(orders);
-    const notifs = await api.get('notifications') || [];
-    notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
-    await api.set('notifications', notifs);
-    Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    if (!await acquireLock()) return;
+    try {
+      const orders = supplyOrders.map((o) => {
+        if (o.id === orderId) {
+          o.status = 'Reviewed Discrepancy (Correction)';
+          o.handledBy = { ...o.handledBy, correctionBy: user?.username, correctionAt: new Date().toISOString() };
+        }
+        return o;
+      });
+      await api.set('supplyOrders', orders);
+      setSupplyOrders(orders);
+      const notifs = await api.get('notifications') || [];
+      notifs.unshift({ id: 'notif-' + Date.now(), title: 'Missing Shipment Incoming', message: 'Supplier corrections for ' + orderId + ' will arrive next shipment.', timestamp: new Date().toISOString(), role: 'staff', read: false });
+      await api.set('notifications', notifs);
+      Swal.fire({ icon: 'success', title: 'Correction flag set. Returned to Staff queue.', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    } finally {
+      await releaseLock();
+    }
   };
 
   const renderActions = () => {

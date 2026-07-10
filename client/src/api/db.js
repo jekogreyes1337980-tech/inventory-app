@@ -47,4 +47,29 @@ export const api = {
       body: JSON.stringify({ username, password, role }),
     });
   },
+
+  async acquireLock(username) {
+    return request('/api/lock', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+  },
+
+  async renewLock(username) {
+    return request('/api/lock/renew', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+  },
+
+  async releaseLock(username) {
+    return request('/api/lock/release', {
+      method: 'POST',
+      body: JSON.stringify({ username }),
+    });
+  },
+
+  async lockStatus() {
+    return request('/api/lock/status');
+  },
 };

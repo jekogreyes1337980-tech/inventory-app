@@ -150,6 +150,60 @@ app.post('/api/verify', async (req, res) => {
     }
 });
 
+// --- Session Lock Endpoints (one writer at a time) ---
+// In-memory lock: { username, displayName, acquiredAt }
+let activeLock = null;
+const LOCK_TTL_MS = 30000; // 30 seconds
+
+function isLockExpired() {
+  return activeLock && (Date.now() - activeLock.acquiredAt > LOCK_TTL_MS);
+}
+
+// Acquire lock
+app.post('/api/lock', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ success: false, error: 'Username required' });
+
+  if (activeLock && !isLockExpired() && activeLock.username !== username) {
+    return res.json({
+      success: false,
+      lockedBy: activeLock.username,
+      since: activeLock.acquiredAt,
+    });
+  }
+
+  activeLock = { username, acquiredAt: Date.now() };
+  res.json({ success: true });
+});
+
+// Renew / heartbeat (keep lock alive)
+app.post('/api/lock/renew', (req, res) => {
+  const { username } = req.body;
+  if (activeLock && activeLock.username === username) {
+    activeLock.acquiredAt = Date.now();
+    return res.json({ success: true });
+  }
+  res.json({ success: false });
+});
+
+// Release lock
+app.post('/api/lock/release', (req, res) => {
+  const { username } = req.body;
+  if (activeLock && activeLock.username === username) {
+    activeLock = null;
+  }
+  res.json({ success: true });
+});
+
+// Lock status
+app.get('/api/lock/status', (req, res) => {
+  if (!activeLock || isLockExpired()) {
+    activeLock = null;
+    return res.json({ locked: false });
+  }
+  res.json({ locked: true, lockedBy: activeLock.username, since: activeLock.acquiredAt });
+});
+
 // SPA catch-all: serve client index.html for non-API routes in production
 if (isProduction) {
     app.use((req, res, next) => {
