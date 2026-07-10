@@ -33,7 +33,12 @@ export default function ProtectedLayout() {
   }, [user, logout]);
 
   useEffect(() => {
-    if (user) loadNotifications();
+    if (user) {
+      loadNotifications();
+      // Poll for new notifications every 10 seconds
+      const intervalId = setInterval(loadNotifications, 10000);
+      return () => clearInterval(intervalId);
+    }
   }, [user, loadNotifications]);
 
   if (loading || verifying) return null;

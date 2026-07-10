@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../api/db';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
@@ -7,9 +7,16 @@ import Badge from '../components/shared/Badge';
 export default function Inventory() {
   const [products, setProducts] = useState([]);
 
-  useEffect(() => {
-    (async () => setProducts(await api.get('products') || []))();
+  const loadProducts = useCallback(async () => {
+    setProducts(await api.get('products') || []);
   }, []);
+
+  useEffect(() => {
+    loadProducts();
+    // Refresh inventory every 15 seconds
+    const intervalId = setInterval(loadProducts, 15000);
+    return () => clearInterval(intervalId);
+  }, [loadProducts]);
 
   return (
     <section className="tab-panel active">

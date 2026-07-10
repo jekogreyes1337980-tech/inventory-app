@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../api/db';
@@ -24,15 +24,20 @@ export default function Dashboard() {
   const [adjustments, setAdjustments] = useState([]);
   const [clientOrders, setClientOrders] = useState([]);
 
-  useEffect(() => {
-    (async () => {
-      setProducts(await api.get('products') || []);
-      setSupplyOrders(await api.get('supplyOrders') || []);
-      setConversions(await api.get('conversions') || []);
-      setAdjustments(await api.get('adjustments') || []);
-      setClientOrders(await api.get('clientOrders') || []);
-    })();
+  const loadData = useCallback(async () => {
+    setProducts(await api.get('products') || []);
+    setSupplyOrders(await api.get('supplyOrders') || []);
+    setConversions(await api.get('conversions') || []);
+    setAdjustments(await api.get('adjustments') || []);
+    setClientOrders(await api.get('clientOrders') || []);
   }, []);
+
+  useEffect(() => {
+    loadData();
+    // Refresh dashboard data every 15 seconds
+    const intervalId = setInterval(loadData, 15000);
+    return () => clearInterval(intervalId);
+  }, [loadData]);
 
   const lowStocks = products.filter((p) => p.storefrontQty < p.threshold);
   const activeSupplies = supplyOrders.filter((so) => so.status !== 'Closed');
