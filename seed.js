@@ -9,7 +9,12 @@ const DEFAULT_PRODUCTS = [
   { id: "prod-5", name: "Double Sided Tape 1-inch", category: "Adhesives", unit: "pcs", stockRoomQty: 50, storefrontQty: 8, threshold: 12, racks: ["Rack C-2"], cost: 20.00, price: 35.00, rollLengthMeters: 0, convertedStock: 0 }
 ];
 const DEFAULT_RACKS = ["Rack A-1", "Rack A-2", "Rack B-1", "Rack B-2", "Rack C-1", "Rack C-2"];
-const DEFAULT_SUPPLIERS = ["PaperCo Distributors", "Foil & Wrap Supplies Inc.", "OfficeMart Wholesalers", "Pen & Ink Stationery Corp."];
+const DEFAULT_SUPPLIERS = [
+  { id: "sup-1", name: "PaperCo Distributors", contactPerson: "Maria Santos", phone: "(02) 8123 4567", email: "orders@paperco.com", address: "45 Quezon Ave, Quezon City" },
+  { id: "sup-2", name: "Foil & Wrap Supplies Inc.", contactPerson: "John Reyes", phone: "(02) 8987 6543", email: "sales@foilwrap.com", address: "88 Pioneer St, Mandaluyong" },
+  { id: "sup-3", name: "OfficeMart Wholesalers", contactPerson: "Ana Gonzales", phone: "(049) 545 1234", email: "info@officemart.ph", address: "12 National Highway, Sta. Rosa, Laguna" },
+  { id: "sup-4", name: "Pen & Ink Stationery Corp.", contactPerson: "Carlos Dimagiba", phone: "(02) 8555 6789", email: "support@pensink.com", address: "67 Rizal Ave, Makati" },
+];
 
 const MOCK_DATA = {
   products: DEFAULT_PRODUCTS,

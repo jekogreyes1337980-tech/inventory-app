@@ -11,6 +11,7 @@ import StockOutSF from './pages/StockOutSF';
 import StockOutClient from './pages/StockOutClient';
 import Conversion from './pages/Conversion';
 import Adjustment from './pages/Adjustment';
+import Suppliers from './pages/Suppliers';
 
 export default function App() {
   return (
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/stock-out-client" element={<StockOutClient />} />
             <Route path="/conversion" element={<Conversion />} />
             <Route path="/adjustment" element={<Adjustment />} />
+            <Route path="/suppliers" element={<Suppliers />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

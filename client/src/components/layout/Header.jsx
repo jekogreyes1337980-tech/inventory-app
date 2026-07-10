@@ -8,6 +8,7 @@ const PAGE_TITLES = {
   'stock-out-client': 'Stock Out - Big Client',
   conversion: 'Stock Conversion',
   adjustment: 'Stock Adjustments',
+  suppliers: 'Supplier Management',
 };
 
 export default function Header({ unreadCount, onBellClick }) {

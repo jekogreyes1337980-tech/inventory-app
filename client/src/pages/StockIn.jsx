@@ -73,19 +73,20 @@ export default function StockIn() {
 
   const handleCreateOrder = async (e) => {
     e.preventDefault();
-    const supplierName = e.target.supplierName.value;
-    const supplierContact = e.target.supplierContact.value;
-    const supplierPhone = e.target.supplierPhone.value;
-    const supplierEmail = e.target.supplierEmail.value;
-    const supplierAddress = e.target.supplierAddress.value;
-
-    let supplier = supplierName;
+    const supplierId = e.target.supplierId.value;
+    const selected = suppliers.find((s) => s.id === supplierId);
+    if (!selected) {
+      Swal.fire({ icon: 'warning', title: 'Please select a valid supplier.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
+    let s = selected.name;
     const parts = [];
-    if (supplierContact) parts.push(`Contact: ${supplierContact}`);
-    if (supplierPhone) parts.push(`Phone: ${supplierPhone}`);
-    if (supplierEmail) parts.push(`Email: ${supplierEmail}`);
-    if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
-    if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
+    if (selected.contactPerson) parts.push(`Contact: ${selected.contactPerson}`);
+    if (selected.phone) parts.push(`Phone: ${selected.phone}`);
+    if (selected.email) parts.push(`Email: ${selected.email}`);
+    if (selected.address) parts.push(`Address: ${selected.address}`);
+    if (parts.length > 0) s += ` (${parts.join(', ')})`;
+    const supplier = s;
 
     const validItems = draftItems.filter(
       (item) => item.itemName.trim() && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
@@ -355,16 +356,13 @@ export default function StockIn() {
           </h2>
           <form onSubmit={handleCreateOrder}>
             <div className="form-group">
-              <label>Supplier Details</label>
-              <div className="form-row" style={{ marginBottom: '0.5rem' }}>
-                <input type="text" name="supplierName" placeholder="Supplier Name" required style={{ flex: 1 }} />
-                <input type="text" name="supplierContact" placeholder="Contact Person (Optional)" style={{ flex: 1 }} />
-              </div>
-              <div className="form-row" style={{ marginBottom: '0.5rem' }}>
-                <input type="text" name="supplierPhone" placeholder="Phone Number (Optional)" style={{ flex: 1 }} />
-                <input type="text" name="supplierEmail" placeholder="Email Address (Optional)" style={{ flex: 1 }} />
-              </div>
-              <input type="text" name="supplierAddress" placeholder="Physical Address (Optional)" style={{ width: '100%' }} />
+              <label>Supplier</label>
+              <select name="supplierId" required>
+                <option value="">-- Select a Supplier --</option>
+                {suppliers.map((s) => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
             </div>
 
             <div className="form-group">
