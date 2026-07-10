@@ -29,7 +29,9 @@ export default function StockIn() {
   const [selectedOrderId, setSelectedOrderId] = useState('');
 
   // Draft item builder state
-  const [draftItems, setDraftItems] = useState([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
+  const CATEGORIES = ['Raw Materials', 'Finished Goods', 'Office Supplies', 'Equipment & Tools', 'Packaging Materials', 'Consumables', 'Other'];
+
+  const [draftItems, setDraftItems] = useState([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false, category: '' }]);
 
   const load = useCallback(async () => {
     setProducts(await api.get('products') || []);
@@ -57,7 +59,7 @@ export default function StockIn() {
   };
 
   const addDraftRow = () => {
-    setDraftItems([...draftItems, { itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
+    setDraftItems([...draftItems, { itemName: '', quantity: '', unitPrice: '', isConvertible: false, category: '' }]);
   };
 
   const removeDraftRow = (idx) => {
@@ -89,11 +91,11 @@ export default function StockIn() {
     const supplier = s;
 
     const validItems = draftItems.filter(
-      (item) => item.itemName.trim() && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
+      (item) => item.itemName.trim() && item.category && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
     );
 
     if (validItems.length === 0) {
-      Swal.fire({ icon: 'warning', title: 'Please add at least one item with a valid name, quantity, and unit price.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      Swal.fire({ icon: 'warning', title: 'Each item needs a name, category, quantity, and unit price.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
       return;
     }
 
@@ -106,6 +108,7 @@ export default function StockIn() {
       status: 'Draft',
       items: validItems.map((item) => ({
         itemName: item.itemName.trim(),
+        category: item.category || 'Other',
         orderedQty: parseInt(item.quantity),
         unitPrice: parseFloat(item.unitPrice),
         isConvertible: item.isConvertible,
@@ -117,7 +120,7 @@ export default function StockIn() {
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
     setSelectedOrderId(orderId);
-    setDraftItems([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
+    setDraftItems([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false, category: '' }]);
     Swal.fire({ icon: 'success', title: `Supply Order ${orderId} created as Draft!`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
@@ -194,7 +197,7 @@ export default function StockIn() {
               products.push({
                 id: 'prod-' + Date.now() + '-' + Math.random().toString(36).slice(2,6),
                 name: item.itemName,
-                category: 'General',
+                category: item.category || 'Other',
                 unit: item.isConvertible ? 'rolls/meters' : 'pcs',
                 stockRoomQty: item.receivedQty || 0,
                 storefrontQty: 0,
@@ -379,6 +382,17 @@ export default function StockIn() {
                         style={{ flex: 2, minWidth: '120px' }}
                         required
                       />
+                      <select
+                        value={item.category}
+                        onChange={(e) => updateDraftRow(idx, 'category', e.target.value)}
+                        style={{ flex: 1, minWidth: '100px' }}
+                        required
+                      >
+                        <option value="" disabled hidden>Category</option>
+                        {CATEGORIES.map((c) => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                      </select>
                       <input
                         type="number"
                         placeholder="Qty"
@@ -398,7 +412,7 @@ export default function StockIn() {
                         style={{ flex: 1, minWidth: '80px' }}
                         required
                       />
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         <input
                           type="checkbox"
                           checked={item.isConvertible}
@@ -468,15 +482,15 @@ export default function StockIn() {
             <div style={{ marginBottom: '1.5rem' }}>
               <h4 style={{ marginBottom: '0.75rem' }}>Delivery Items Log</h4>
               <DataTable
-                headers={['Item', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
+                headers={['Item', 'Category', 'Unit Price', 'Ordered', 'Received', 'Rack Location', 'Match Status']}
                 rows={selected.items.map((item) => {
                   const isDiscrepancy = selected.status !== 'Draft' && selected.status !== 'Ordered' && selected.status !== 'For Staff Confirmation' && item.receivedQty !== item.orderedQty;
                   return (
                     <>
                       <td><strong>{item.itemName}</strong></td>
+                      <td><Badge>{item.category || '—'}</Badge></td>
                       <td>&#x20B1;{(item.unitPrice || 0).toFixed(2)}</td>
                       <td>{item.orderedQty}</td>
-                      {role === 'admin' && <td>{item.unitPrice ? `$${item.unitPrice.toFixed(2)}` : '-'}</td>}
                       <td>{item.receivedQty !== null ? item.receivedQty : '-'}</td>
                       <td><Badge>{item.rackLocation || '-'}</Badge></td>
                       <td>{isDiscrepancy ? <span className="discrepancy-badge">Discrepancy</span> : (item.receivedQty !== null ? <Badge variant="success">Match</Badge> : <Badge variant="muted">Pending</Badge>)}</td>
