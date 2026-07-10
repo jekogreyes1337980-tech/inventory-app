@@ -27,7 +27,7 @@ export default function StockIn() {
   const [selectedOrderId, setSelectedOrderId] = useState('');
 
   // Draft item builder state
-  const [draftItems, setDraftItems] = useState([{ itemName: '', quantity: '', unitPrice: '' }]);
+  const [draftItems, setDraftItems] = useState([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
 
   const load = useCallback(async () => {
     setProducts(await api.get('products') || []);
@@ -55,7 +55,7 @@ export default function StockIn() {
   };
 
   const addDraftRow = () => {
-    setDraftItems([...draftItems, { itemName: '', quantity: '', unitPrice: '' }]);
+    setDraftItems([...draftItems, { itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
   };
 
   const removeDraftRow = (idx) => {
@@ -85,16 +85,14 @@ export default function StockIn() {
     if (supplierAddress) parts.push(`Address: ${supplierAddress}`);
     if (parts.length > 0) supplier += ` (${parts.join(', ')})`;
 
-    const selectedItems = [];
-    products.forEach((p) => {
-      const chk = form[`chk-${p.id}`];
-      const qtyInput = form[`qty-${p.id}`];
-      if (chk?.checked && qtyInput) {
-        const qty = parseInt(qtyInput.value);
-        if (!isNaN(qty) && qty > 0) selectedItems.push({ productId: p.id, productName: p.name, orderedQty: qty, receivedQty: null, rackLocation: null });
-      }
-    });
-    if (selectedItems.length === 0) { Swal.fire({ icon: 'warning', title: 'Please select at least one product with a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' }); return; }
+    const validItems = draftItems.filter(
+      (item) => item.itemName.trim() && parseInt(item.quantity) > 0 && parseFloat(item.unitPrice) >= 0
+    );
+
+    if (validItems.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'Please add at least one item with a valid name, quantity, and unit price.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
 
     const orders = [...supplyOrders];
     const orderId = 'SO-' + (1000 + orders.length + 1);
@@ -107,6 +105,7 @@ export default function StockIn() {
         itemName: item.itemName.trim(),
         orderedQty: parseInt(item.quantity),
         unitPrice: parseFloat(item.unitPrice),
+        isConvertible: item.isConvertible,
         receivedQty: null,
         rackLocation: null,
       })),
@@ -115,7 +114,7 @@ export default function StockIn() {
     await api.set('supplyOrders', orders);
     setSupplyOrders(orders);
     setSelectedOrderId(orderId);
-    setDraftItems([{ itemName: '', quantity: '', unitPrice: '' }]);
+    setDraftItems([{ itemName: '', quantity: '', unitPrice: '', isConvertible: false }]);
     Swal.fire({ icon: 'success', title: `Supply Order ${orderId} created as Draft!`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
   };
 
@@ -278,9 +277,7 @@ export default function StockIn() {
                 <div key={item.itemName} className="input-grid-item">
                   <span className="input-grid-name">{item.itemName} <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>(Ordered: {item.orderedQty})</span></span>
                   <input type="number" id={'rec-qty-' + item.itemName.replace(/\s+/g, '-')} defaultValue={item.orderedQty} min="0" className="input-grid-qty" placeholder="Rec Qty" />
-                  <select id={'rec-rack-' + item.itemName.replace(/\s+/g, '-')} className="input-grid-rack">
-                    {racks.map((r) => <option key={r} value={r}>{r}</option>)}
-                  </select>
+                  <input type="text" id={'rec-rack-' + item.itemName.replace(/\s+/g, '-')} className="input-grid-rack" placeholder="Rack (e.g. A1)" />
                 </div>
               ))}
             </div>
@@ -354,6 +351,14 @@ export default function StockIn() {
                         style={{ flex: 1, minWidth: '80px' }}
                         required
                       />
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        <input
+                          type="checkbox"
+                          checked={item.isConvertible}
+                          onChange={(e) => updateDraftRow(idx, 'isConvertible', e.target.checked)}
+                        />
+                        Convertible
+                      </label>
                       {draftItems.length > 1 && (
                         <button type="button" onClick={() => removeDraftRow(idx)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0.25rem' }}>&times;</button>
                       )}
