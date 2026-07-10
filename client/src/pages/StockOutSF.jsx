@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../api/db';
+import { socket } from '../api/socket';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
@@ -16,12 +17,21 @@ export default function StockOutSF() {
   const [fulfillReq, setFulfillReq] = useState(null);
   const [selectedRack, setSelectedRack] = useState('');
 
-  useEffect(() => {
-    (async () => {
-      setProducts(await api.get('products') || []);
-      setRequests(await api.get('storefrontRequests') || []);
-    })();
+  const load = useCallback(async () => {
+    setProducts(await api.get('products') || []);
+    setRequests(await api.get('storefrontRequests') || []);
   }, []);
+
+  useEffect(() => {
+    load();
+    const handleUpdate = () => load();
+    socket.on('data_updated', handleUpdate);
+    socket.on('data_reset', handleUpdate);
+    return () => {
+      socket.off('data_updated', handleUpdate);
+      socket.off('data_reset', handleUpdate);
+    };
+  }, [load]);
 
   const lowProducts = products.filter((p) => p.storefrontQty < p.threshold);
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import Swal from 'sweetalert2';
 import { api } from '../api/db';
+import { socket } from '../api/socket';
 import { useLock } from '../context/LockContext';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
@@ -40,7 +41,18 @@ export default function StockIn() {
     setRacks(await api.get('racks') || []);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { 
+    load(); 
+    
+    const handleUpdate = () => load();
+    socket.on('data_updated', handleUpdate);
+    socket.on('data_reset', handleUpdate);
+    
+    return () => {
+      socket.off('data_updated', handleUpdate);
+      socket.off('data_reset', handleUpdate);
+    };
+  }, [load]);
 
   useEffect(() => {
     const handler = (e) => setSelectedOrderId(e.detail);
