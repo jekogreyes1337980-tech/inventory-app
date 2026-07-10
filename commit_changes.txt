@@ -119,3 +119,61 @@ FEATURES NOT YET BUILT (PLANNED)
    - Only one person can work on a ticket at a time
    - Prevents conflicting changes and maintains accountability
 
+======================================================
+LATEST CHANGES (2026-07-09)
+======================================================
+
+FILES MODIFIED:
+---------------
+
+1. seed.js
+   - Added `convertedStock: 0` field to all 5 default products
+
+2. client/src/pages/Inventory.jsx
+   - Changed table headers to: Product Name, Total Stock, Converted Stock, Available Stock, Rack Location(s)
+   - Available stock = stockRoomQty - convertedStock
+   - Converted stock shown in warning color, available stock in success/danger color
+
+3. client/src/pages/StockIn.jsx (full rewrite)
+   - Replaced product checklist with free-text multi-item draft builder
+   - Admin enters item name, quantity, and unit price per row
+   - "Add Another Item" button appends rows; delete button removes rows
+   - On order close: items auto-create new products or update existing ones in inventory by name match
+   - Simplified workflow steps: Draft → Forwarded → Staff Checked → Closed
+   - Removed discrepancy/complex statuses
+   - Newly created products get default values (unit: pcs, threshold: 5, convertedStock: 0)
+
+4. client/src/pages/Conversion.jsx (full rewrite)
+   - Both Admin and Staff roles can access (no role restriction)
+   - Select from ALL inventory items, not just roll products
+   - Converting increments `convertedStock` only — does NOT decrease total stock
+   - Shows 3-card stats: Total Stock, Converted Stock, Available Stock
+   - Simplified input: just quantity to convert (removed unit/roll calculators)
+   - Conversion log tracks date, product, qty converted, and operator
+
+5. client/src/pages/Dashboard.jsx
+   - Removed obsolete status references (Closed Refunded, Reviewed Discrepancy)
+   - Simplified badgeClass and activeSupplies filter
+
+6. client/src/components/layout/Header.jsx
+   - Updated conversion page title to "Stock Conversion"
+
+NEW FEATURES:
+-------------
+
+1. Multi-Item Supply Order Draft
+   - Admin dynamically adds items (name, qty, unit price) before finalizing draft
+   - No limit on number of items per order
+
+2. Auto-Inventory Creation on Receipt
+   - When Admin closes a supply order, received items automatically appear in Inventory
+   - Existing products matched by name (case-insensitive) get stock added
+   - New product names create fresh inventory entries
+
+3. Converted Stock Tracking
+   - Each product now has a `convertedStock` counter
+   - Conversion marks units as converted without reducing total stock quantity
+   - Available stock = total stock - converted stock
+   - Inventory page clearly displays all three values
+   - Conversion module accessible by both Admin and Staff
+

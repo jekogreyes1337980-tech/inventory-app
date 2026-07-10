@@ -35,12 +35,11 @@ export default function Dashboard() {
   }, []);
 
   const lowStocks = products.filter((p) => p.storefrontQty < p.threshold);
-  const activeSupplies = supplyOrders.filter((so) => so.status !== 'Closed' && so.status !== 'Closed (Refunded)');
+  const activeSupplies = supplyOrders.filter((so) => so.status !== 'Closed');
 
   const badgeClass = (status) => {
     if (status === 'For Staff Confirmation') return 'warning';
     if (status === 'Staff Checked') return 'info';
-    if (status.includes('Reviewed')) return 'danger';
     return 'indigo';
   };
 
@@ -91,7 +90,7 @@ export default function Dashboard() {
     }
     if (role === 'staff') {
       const confirmationCount = supplyOrders.filter((so) =>
-        so.status === 'For Staff Confirmation' || so.status === 'Reviewed Discrepancy (Correction)'
+        so.status === 'For Staff Confirmation'
       ).length;
       const pendingAdj = adjustments.filter((a) => a.status === 'Requested').length;
       return (

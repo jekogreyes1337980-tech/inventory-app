@@ -5,28 +5,15 @@ import { api } from '../api/db';
 import GlassCard from '../components/shared/GlassCard';
 import DataTable from '../components/shared/DataTable';
 import Button from '../components/shared/Button';
-
-const UNIT_RATES = {
-  'Meters': 1,
-  'Yards': 1.09361,
-  'Feet': 3.28084,
-  'Inches': 39.3701,
-  'Centimeters': 100,
-};
+import Badge from '../components/shared/Badge';
 
 export default function Conversion() {
-  const { role } = useOutletContext();
+  const { role, user } = useOutletContext();
 
   const [products, setProducts] = useState([]);
   const [conversions, setConversions] = useState([]);
   const [selectedProd, setSelectedProd] = useState('');
-  const [inputUnit, setInputUnit] = useState('Meters');
-  const [inputAmount, setInputAmount] = useState('');
-  const [targetUnit, setTargetUnit] = useState('Yards');
-  const [cutLength, setCutLength] = useState('1');
-  const [actual, setActual] = useState('');
-
-  const rollProducts = products.filter((p) => p.unit === 'rolls/meters');
+  const [convertQty, setConvertQty] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -35,60 +22,45 @@ export default function Conversion() {
     })();
   }, []);
 
-  const estimated = (() => {
-    const inputQty = parseFloat(inputAmount);
-    const cl = parseFloat(cutLength);
-    if (!selectedProd || isNaN(inputQty) || inputQty <= 0 || isNaN(cl) || cl <= 0) return 0;
-    
-    // Convert input amount to target unit
-    const inputToMeters = inputQty / UNIT_RATES[inputUnit];
-    const targetAmount = inputToMeters * UNIT_RATES[targetUnit];
-    return Math.floor(targetAmount / cl);
-  })();
+  const selectedProduct = products.find((p) => p.id === selectedProd);
+
+  const availableStock = selectedProduct
+    ? selectedProduct.stockRoomQty - (selectedProduct.convertedStock || 0)
+    : 0;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const qty = parseInt(convertQty);
+
+    if (!selectedProd || isNaN(qty) || qty <= 0) {
+      Swal.fire({ icon: 'warning', title: 'Please select a product and enter a valid quantity.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
+
+    if (qty > availableStock) {
+      Swal.fire({ icon: 'error', title: `Insufficient available stock. Only ${availableStock} units available for conversion.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
+      return;
+    }
+
     const prod = products.find((p) => p.id === selectedProd);
-    if (!prod) return;
-    const inputQty = parseFloat(inputAmount);
-    const cl = parseFloat(cutLength);
-    const act = parseInt(actual);
-    const est = estimated;
+    prod.convertedStock = (prod.convertedStock || 0) + qty;
 
-    if (!selectedProd || isNaN(inputQty) || inputQty <= 0 || isNaN(cl) || cl <= 0 || isNaN(act) || act < 0) {
-      Swal.fire({ icon: 'warning', title: 'Please fill all details with valid positive parameters.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
-      return;
-    }
-
-    const deductedMeters = inputQty / UNIT_RATES[inputUnit];
-
-    if (prod.stockRoomQty < deductedMeters) {
-      Swal.fire({ icon: 'error', title: 'Insufficient roll meters in stock room (' + prod.stockRoomQty.toFixed(2) + 'm available).', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, background: '#0f172a', color: '#f3f4f6' });
-      return;
-    }
-
-    const rate = est > 0 ? (act / est) * 100 : 100;
-    prod.stockRoomQty -= deductedMeters;
-    prod.storefrontQty += act;
     const convs = [...conversions];
     convs.unshift({
       id: 'CONV-' + (100 + convs.length + 1),
       date: new Date().toISOString(),
-      productId: prod.id, productName: prod.name,
-      inputAmount: inputQty, inputUnit: inputUnit, 
-      targetUnit: targetUnit, cutLength: cl,
-      metersDeducted: deductedMeters, estimatedRolls: est,
-      actualRolls: act, conversionRate: rate,
-      operator: role === 'admin' ? 'Administrator' : role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff',
+      productId: prod.id,
+      productName: prod.name,
+      quantity: qty,
+      operator: user?.username || (role === 'admin' ? 'Administrator' : role === 'staff' ? 'Stock Room Staff' : 'Store Front Staff'),
     });
 
     await api.set('products', products);
     await api.set('conversions', convs);
     setProducts([...products]);
     setConversions(convs);
-    Swal.fire({ icon: 'success', title: 'Roll stock conversion completed successfully!', toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
-    setInputAmount('');
-    setActual('');
+    Swal.fire({ icon: 'success', title: `${qty} units of ${prod.name} marked as converted.`, toast: true, position: 'top-end', showConfirmButton: false, timer: 2000, background: '#0f172a', color: '#f3f4f6' });
+    setConvertQty('');
   };
 
   return (
@@ -102,65 +74,64 @@ export default function Conversion() {
               <circle cx="6" cy="18" r="3"></circle>
               <path d="M18 9a9 9 0 0 1-9 9"></path>
             </svg>
-            Pre-cut Roll Conversion Calculator (Yards to Meters)
+            Mark Stock as Converted
           </h2>
 
           <div style={{ borderLeft: '3px solid var(--info)', background: 'rgba(6,182,212,0.04)', padding: '1rem', borderRadius: 'var(--radius-md)', marginBottom: '1.5rem' }}>
             <p style={{ fontSize: '0.85rem', lineHeight: 1.4, color: 'var(--text-muted)' }}>
-              <strong>Note:</strong> Bulk product rolls are globally measured in <strong>Meters</strong> in the Stock Room. Storefront pre-cut rolls are sold by counts. This tool converts your extracted lengths back to Meters to properly deduct from the Stock Room.
+              Select an inventory item and specify how many units to mark as converted. Converting stock tracks usage without reducing the total stock count. Available stock is calculated as <strong>Total Stock minus Converted Stock</strong>.
             </p>
           </div>
 
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Select Roll Product in Stock Room</label>
-              <select value={selectedProd} onChange={(e) => setSelectedProd(e.target.value)}>
-                <option value="">-- Select Roll Product --</option>
-                {rollProducts.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} (Stock Room: {p.stockRoomQty} meters)</option>
-                ))}
+              <label>Select Inventory Item</label>
+              <select value={selectedProd} onChange={(e) => { setSelectedProd(e.target.value); setConvertQty(''); }}>
+                <option value="">-- Select Item --</option>
+                {products.map((p) => {
+                  const avail = p.stockRoomQty - (p.convertedStock || 0);
+                  const unitLabel = p.unit === 'rolls/meters' ? 'meters' : 'pcs';
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — Total: {p.stockRoomQty} {unitLabel}, Available: {avail} {unitLabel}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>Input Unit (From Stock Room)</label>
-                <select value={inputUnit} onChange={(e) => setInputUnit(e.target.value)}>
-                  {Object.keys(UNIT_RATES).map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
+            {selectedProduct && (
+              <div className="form-row" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                <GlassCard style={{ flex: 1, padding: '0.75rem', textAlign: 'center', margin: 0, background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Total Stock</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--primary)' }}>{selectedProduct.stockRoomQty}</div>
+                </GlassCard>
+                <GlassCard style={{ flex: 1, padding: '0.75rem', textAlign: 'center', margin: 0, background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Converted</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--warning)' }}>{selectedProduct.convertedStock || 0}</div>
+                </GlassCard>
+                <GlassCard style={{ flex: 1, padding: '0.75rem', textAlign: 'center', margin: 0, background: 'rgba(255,255,255,0.03)' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Available</div>
+                  <div style={{ fontSize: '1.5rem', fontWeight: 700, color: availableStock > 0 ? 'var(--success)' : 'var(--danger)' }}>{availableStock}</div>
+                </GlassCard>
               </div>
-              <div className="form-group">
-                <label>Extracted Length</label>
-                <input type="number" step="0.01" value={inputAmount} onChange={(e) => setInputAmount(e.target.value)} placeholder="e.g. 5" />
-              </div>
-            </div>
+            )}
 
-            <div className="form-row">
-              <div className="form-group">
-                <label>Target Pre-cut Unit</label>
-                <select value={targetUnit} onChange={(e) => setTargetUnit(e.target.value)}>
-                  {Object.keys(UNIT_RATES).map(u => <option key={u} value={u}>{u}</option>)}
-                </select>
-              </div>
-              <div className="form-group">
-                <label>Length per Roll</label>
-                <input type="number" step="0.01" value={cutLength} onChange={(e) => setCutLength(e.target.value)} placeholder="e.g. 1.0" />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label>Estimated Rolls Output</label>
-                <input type="number" readOnly value={estimated} style={{ background: 'rgba(255,255,255,0.02)', fontWeight: 600, color: 'var(--info)' }} />
-              </div>
-              <div className="form-group">
-                <label>Actual Pre-cut Rolls Produced</label>
-                <input type="number" value={actual} onChange={(e) => setActual(e.target.value)} placeholder="Actual rolls produced" required />
-              </div>
+            <div className="form-group">
+              <label>Quantity to Convert</label>
+              <input
+                type="number"
+                value={convertQty}
+                onChange={(e) => setConvertQty(e.target.value)}
+                placeholder="e.g. 5"
+                min="1"
+                max={availableStock || 1}
+                required
+              />
             </div>
 
             <Button type="submit" variant="success" className="w-full" style={{ marginTop: '0.5rem' }}>
-              Record Conversion & Stock to Storefront
+              Record Conversion
             </Button>
           </form>
         </GlassCard>
@@ -174,20 +145,16 @@ export default function Conversion() {
             Conversion Logs
           </h2>
           <DataTable
-            headers={['Date', 'Product', 'Extraction', 'Target/Roll', 'Est Output', 'Act Output', 'Rate', 'Staff']}
+            headers={['Date', 'Product', 'Qty Converted', 'Converted By']}
             rows={conversions.map((c) => (
               <>
                 <td>{new Date(c.date).toLocaleDateString()}</td>
                 <td><strong>{c.productName}</strong></td>
-                <td>{c.inputAmount ? `${c.inputAmount} ${c.inputUnit}` : `${c.metersDeducted} Meters`}</td>
-                <td>{c.cutLength ? `${c.cutLength} ${c.targetUnit}` : '-'}</td>
-                <td>{c.estimatedRolls} rolls</td>
-                <td>{c.actualRolls} rolls</td>
-                <td><strong>{c.conversionRate.toFixed(1)}%</strong></td>
-                <td>{c.operator}</td>
+                <td>{c.quantity} units</td>
+                <td><Badge variant="info">{c.operator}</Badge></td>
               </>
             ))}
-            emptyMessage="No roll conversions recorded."
+            emptyMessage="No conversions recorded."
           />
         </GlassCard>
       </div>

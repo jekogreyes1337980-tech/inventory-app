@@ -6,7 +6,7 @@ const PAGE_TITLES = {
   'stock-in': 'Stock In - Supply Orders',
   'stock-out-sf': 'Stock Out - Store Front',
   'stock-out-client': 'Stock Out - Big Client',
-  conversion: 'Stock Conversion - Roll Calculator',
+  conversion: 'Stock Conversion',
   adjustment: 'Stock Adjustments',
 };
 
