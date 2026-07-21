@@ -12,6 +12,7 @@ import StockOutClient from './pages/StockOutClient';
 import Conversion from './pages/Conversion';
 import Adjustment from './pages/Adjustment';
 import Suppliers from './pages/Suppliers';
+import Users from './pages/Users';
 
 export default function App() {
   return (
@@ -30,6 +31,7 @@ export default function App() {
             <Route path="/conversion" element={<Conversion />} />
             <Route path="/adjustment" element={<Adjustment />} />
             <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/users" element={<Users />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>

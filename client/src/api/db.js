@@ -72,4 +72,33 @@ export const api = {
   async lockStatus() {
     return request('/api/lock/status');
   },
+
+  async getUsers(username) {
+    return request('/api/users', {
+      headers: { 'Content-Type': 'application/json', 'x-user-username': username },
+    });
+  },
+
+  async createUser(username, password, role, adminUsername) {
+    return request('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-user-username': adminUsername },
+      body: JSON.stringify({ username, password, role }),
+    });
+  },
+
+  async updateUser(id, data, adminUsername) {
+    return request(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'x-user-username': adminUsername },
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteUser(id, adminUsername) {
+    return request(`/api/users/${id}`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', 'x-user-username': adminUsername },
+    });
+  },
 };

@@ -9,6 +9,7 @@ const PAGE_TITLES = {
   conversion: 'Stock Conversion',
   adjustment: 'Stock Adjustments',
   suppliers: 'Supplier Management',
+  users: 'User Account Management',
 };
 
 export default function Header({ unreadCount, onBellClick }) {
